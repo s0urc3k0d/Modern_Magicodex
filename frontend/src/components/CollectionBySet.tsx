@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import CardDisplay from './CardDisplay';
-import type { UserCard } from '../types';
+import type { Card, UserCard } from '../types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { collectionService, setsService } from '../services/collection';
 import { extractColors, sortByCollector, getCardPriceEUR, parsePrices, isExtraSafe } from '../domain/cards/normalize';
@@ -12,8 +12,9 @@ interface CollectionBySetProps {
   userCards: UserCard[];
   forSaleData?: Record<string, { quantity: number; quantityFoil: number }>;
   viewMode?: 'grid' | 'list';
-  onUpdateQuantity?: (cardId: string, newQuantity: number, newQuantityFoil: number) => void;
+  onUpdateQuantity?: (cardId: string, newQuantity: number, newQuantityFoil: number, language?: string) => void;
   onAddToSale?: (cardId: string) => void;
+  onOpenAddModal?: (card: Card) => void;
   searchQuery?: string;
   selectedRarity?: string;
   selectedColors?: string[];
@@ -33,16 +34,18 @@ interface SetGroupSectionProps {
   group: SetGroup;
   viewMode: 'grid' | 'list';
   forSaleData: Record<string, { quantity: number; quantityFoil: number }>;
+  userCardsByCardId: Map<string, UserCard[]>;
   isStdExpanded: boolean;
   isXExpanded: boolean;
   toggleKey: (key: string) => void;
   sortUserCards: (arr: any[]) => any[];
-  onUpdateQuantity?: (cardId: string, newQuantity: number, newQuantityFoil: number) => void;
+  onUpdateQuantity?: (cardId: string, newQuantity: number, newQuantityFoil: number, language?: string) => void;
   onAddToSale?: (cardId: string) => void;
+  onOpenAddModal?: (card: Card) => void;
   handleToggleListItem: (cardId: string, type: any) => Promise<null>;
 }
 
-const SetGroupSection = ({ group, viewMode, forSaleData, isStdExpanded, isXExpanded, toggleKey, sortUserCards, onUpdateQuantity, onAddToSale, handleToggleListItem }: SetGroupSectionProps) => {
+const SetGroupSection = ({ group, viewMode, forSaleData, userCardsByCardId, isStdExpanded, isXExpanded, toggleKey, sortUserCards, onUpdateQuantity, onAddToSale, onOpenAddModal, handleToggleListItem }: SetGroupSectionProps) => {
   // Separate queries per group; only run when expanded
   const { data: standardPage, isLoading: standardLoading } = useQuery({
     queryKey: ['set-standard-count', group.set.id],
@@ -135,9 +138,11 @@ const SetGroupSection = ({ group, viewMode, forSaleData, isStdExpanded, isXExpan
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                   {sortUserCards(standardCards).map((uc: any) => (
                     <CardDisplay key={uc.id} card={uc.card} userCard={uc}
+                      userCardsByLang={userCardsByCardId.get(uc.cardId)}
                       forSaleQuantity={forSaleData[uc.cardId]}
                       onUpdateQuantity={onUpdateQuantity}
                       onAddToSale={onAddToSale}
+                      onOpenAddModal={onOpenAddModal}
                       onToggleListItem={handleToggleListItem}
                       showQuantityControls={true}
                     />
@@ -147,9 +152,11 @@ const SetGroupSection = ({ group, viewMode, forSaleData, isStdExpanded, isXExpan
                 <div className="space-y-2">
                   {sortUserCards(standardCards).map((uc: any) => (
                     <CardDisplay key={uc.id} card={uc.card} userCard={uc}
+                      userCardsByLang={userCardsByCardId.get(uc.cardId)}
                       forSaleQuantity={forSaleData[uc.cardId]}
                       onUpdateQuantity={onUpdateQuantity}
                       onAddToSale={onAddToSale}
+                      onOpenAddModal={onOpenAddModal}
                       onToggleListItem={handleToggleListItem}
                       showQuantityControls={true}
                       viewMode="list"
@@ -212,9 +219,11 @@ const SetGroupSection = ({ group, viewMode, forSaleData, isStdExpanded, isXExpan
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                   {sortUserCards(extraCards).map((uc: any) => (
                     <CardDisplay key={uc.id} card={uc.card} userCard={uc}
+                      userCardsByLang={userCardsByCardId.get(uc.cardId)}
                       forSaleQuantity={forSaleData[uc.cardId]}
                       onUpdateQuantity={onUpdateQuantity}
                       onAddToSale={onAddToSale}
+                      onOpenAddModal={onOpenAddModal}
                       onToggleListItem={handleToggleListItem}
                       showQuantityControls={true}
                     />
@@ -224,9 +233,11 @@ const SetGroupSection = ({ group, viewMode, forSaleData, isStdExpanded, isXExpan
                 <div className="space-y-2">
                   {sortUserCards(extraCards).map((uc: any) => (
                     <CardDisplay key={uc.id} card={uc.card} userCard={uc}
+                      userCardsByLang={userCardsByCardId.get(uc.cardId)}
                       forSaleQuantity={forSaleData[uc.cardId]}
                       onUpdateQuantity={onUpdateQuantity}
                       onAddToSale={onAddToSale}
+                      onOpenAddModal={onOpenAddModal}
                       onToggleListItem={handleToggleListItem}
                       showQuantityControls={true}
                       viewMode="list"
@@ -248,6 +259,7 @@ const CollectionBySet = ({
   viewMode = 'grid',
   onUpdateQuantity,
   onAddToSale,
+  onOpenAddModal,
   searchQuery = '',
   selectedRarity = '',
   selectedColors = [],
@@ -257,6 +269,14 @@ const CollectionBySet = ({
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [showEmptySets, setShowEmptySets] = useState(false);
   const [sortBy, setSortBy] = useState<'collector' | 'priceAsc' | 'priceDesc' | 'name'>('collector');
+
+  // Créer un map des userCards par cardId (pour grouper les différentes langues)
+  const userCardsByCardId = new Map<string, UserCard[]>();
+  userCards.forEach(uc => {
+    const existing = userCardsByCardId.get(uc.cardId) || [];
+    existing.push(uc);
+    userCardsByCardId.set(uc.cardId, existing);
+  });
 
   const { data: listsData } = useQuery({ queryKey: ['lists'], queryFn: () => collectionService.getListItems() });
 
@@ -388,12 +408,14 @@ const CollectionBySet = ({
             group={group}
             viewMode={viewMode}
             forSaleData={forSaleData}
+            userCardsByCardId={userCardsByCardId}
             isStdExpanded={expanded.has(stdKey)}
             isXExpanded={expanded.has(xKey)}
             toggleKey={toggleKey}
             sortUserCards={sortUserCards}
             onUpdateQuantity={onUpdateQuantity}
             onAddToSale={onAddToSale}
+            onOpenAddModal={onOpenAddModal}
             handleToggleListItem={handleToggleListItem}
           />
         );

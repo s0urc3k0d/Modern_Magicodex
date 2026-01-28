@@ -425,13 +425,16 @@ router.post('/cards/bulk', collectionBulkLimiter, async (req: AuthenticatedReque
 /**
  * PUT /api/collection/cards/:cardId
  * Met à jour une carte dans la collection
+ * Query param: language (requis - identifie l'entrée unique)
  */
 router.put('/cards/:cardId', collectionCardLimiter, async (req: AuthenticatedRequest, res) => {
   try {
     const cardId = req.params.cardId as string;
     const userId = req.user!.id;
+    // La langue identifie l'entrée unique à mettre à jour
+    const language = (req.query.language as string) || req.body.language || 'en';
 
-    const userCard = await collectionService.updateCardInCollection(userId, cardId, req.body);
+    const userCard = await collectionService.updateCardInCollection(userId, cardId, language, req.body);
 
     if (!userCard) {
       invalidateCollectionStatsCache(userId);
@@ -457,13 +460,15 @@ router.put('/cards/:cardId', collectionCardLimiter, async (req: AuthenticatedReq
 /**
  * DELETE /api/collection/cards/:cardId
  * Supprime une carte de la collection
+ * Query param: language (requis - identifie l'entrée unique)
  */
 router.delete('/cards/:cardId', async (req: AuthenticatedRequest, res) => {
   try {
     const cardId = req.params.cardId as string;
     const userId = req.user!.id;
+    const language = (req.query.language as string) || 'en';
 
-    await collectionService.removeCardFromCollection(userId, cardId);
+    await collectionService.removeCardFromCollection(userId, cardId, language);
   invalidateCollectionStatsCache(userId);
     res.json({ message: 'Carte supprimée de la collection' });
   } catch (error) {

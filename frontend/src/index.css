@@ -68,6 +68,10 @@ body {
     @apply p-1 rounded transition-colors duration-200 focus:outline-none;
   }
   
+  .btn-icon-xs {
+    @apply p-0.5 rounded transition-colors duration-200 focus:outline-none text-white;
+  }
+  
   .checkbox {
     @apply rounded border-gray-600 text-mtg-primary focus:ring-mtg-primary focus:ring-offset-0 bg-mtg-surface;
   }

@@ -1,18 +1,28 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Minus, Eye, Sparkles, ShoppingCart } from 'lucide-react';
+import { Plus, Minus, Eye, Sparkles, ShoppingCart, Globe } from 'lucide-react';
 import type { Card, UserCard, ListType, UserListItem } from '../types';
 import { ManaCost } from './ManaSymbol';
 import { normalizeCardBasics, pickCardImageUrl, getCardPriceEUR } from '../domain/cards/normalize';
+import { LANGUAGES } from '../services/sales';
+
+// Helper pour obtenir le label court d'une langue
+const getLangLabel = (lang: string) => {
+  const found = LANGUAGES.find(l => l.value === lang);
+  return found ? found.flag : lang.toUpperCase();
+};
 
 interface CardDisplayProps {
   card: Card;
   userCard?: UserCard | null;
+  // Support pour plusieurs entrées par langue
+  userCardsByLang?: UserCard[];
   forSaleQuantity?: { quantity: number; quantityFoil: number } | null;
-  onAddToCollection?: (cardId: string, quantity: number, foil?: boolean) => void;
-  onUpdateQuantity?: (cardId: string, newQuantity: number, newQuantityFoil: number) => void;
+  onAddToCollection?: (cardId: string, quantity: number, foil?: boolean, language?: string) => void;
+  onUpdateQuantity?: (cardId: string, newQuantity: number, newQuantityFoil: number, language?: string) => void;
   onToggleListItem?: (cardId: string, type: ListType) => Promise<UserListItem | null> | void;
   onAddToSale?: (cardId: string) => void;
+  onOpenAddModal?: (card: Card) => void;
   showQuantityControls?: boolean;
   viewMode?: 'grid' | 'list';
 }
@@ -20,11 +30,13 @@ interface CardDisplayProps {
 const CardDisplay = ({
   card,
   userCard,
+  userCardsByLang,
   forSaleQuantity,
   onAddToCollection,
   onUpdateQuantity,
   onToggleListItem,
   onAddToSale,
+  onOpenAddModal,
   showQuantityControls = true,
   viewMode = 'grid'
 }: CardDisplayProps) => {
@@ -33,8 +45,10 @@ const CardDisplay = ({
   const [thumbLoaded, setThumbLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
 
-  const isOwned = userCard && (userCard.quantity > 0 || userCard.quantityFoil > 0);
-  const totalQuantity = (userCard?.quantity || 0) + (userCard?.quantityFoil || 0);
+  // Si userCardsByLang est fourni, calculer les totaux
+  const allUserCards = userCardsByLang || (userCard ? [userCard] : []);
+  const totalQuantity = allUserCards.reduce((sum, uc) => sum + (uc.quantity || 0) + (uc.quantityFoil || 0), 0);
+  const isOwned = totalQuantity > 0;
 
   // Normalisation des données JSON
   const { imageUris, prices } = normalizeCardBasics(card as any);
@@ -195,66 +209,85 @@ const CardDisplay = ({
 
           {/* Contrôles de quantité */}
           {showQuantityControls && (
-            <div className="mt-3 flex items-center justify-between">
+            <div className="mt-3">
               {isOwned ? (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      const newQuantity = Math.max(0, (userCard?.quantity || 0) - 1);
-                      onUpdateQuantity?.(card.id, newQuantity, userCard?.quantityFoil || 0);
-                    }}
-                    className="btn-icon-sm bg-red-600 hover:bg-red-700"
-                    disabled={!userCard?.quantity || userCard.quantity <= 0}
-                  >
-                    <Minus className="h-3 w-3" />
-                  </button>
+                <div className="space-y-2">
+                  {/* Afficher les quantités par langue */}
+                  {allUserCards.map((uc) => (
+                    <div key={uc.id || `${uc.cardId}-${uc.language}`} className="flex items-center justify-between bg-gray-700/50 rounded px-2 py-1">
+                      <span className="text-xs text-gray-300 flex items-center gap-1">
+                        <Globe className="h-3 w-3" />
+                        {getLangLabel(uc.language)}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {/* Normal */}
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => {
+                              const newQuantity = Math.max(0, (uc.quantity || 0) - 1);
+                              onUpdateQuantity?.(card.id, newQuantity, uc.quantityFoil || 0, uc.language);
+                            }}
+                            className="btn-icon-xs bg-red-600 hover:bg-red-700"
+                            disabled={!uc.quantity || uc.quantity <= 0}
+                          >
+                            <Minus className="h-2 w-2" />
+                          </button>
+                          <span className="text-white font-medium text-xs min-w-[1.5rem] text-center">
+                            {uc.quantity || 0}
+                          </span>
+                          <button
+                            onClick={() => {
+                              const newQuantity = (uc.quantity || 0) + 1;
+                              onUpdateQuantity?.(card.id, newQuantity, uc.quantityFoil || 0, uc.language);
+                            }}
+                            className="btn-icon-xs bg-green-600 hover:bg-green-700"
+                          >
+                            <Plus className="h-2 w-2" />
+                          </button>
+                        </div>
+                        
+                        {/* Foil */}
+                        <div className="border-l border-gray-600 pl-2 flex items-center gap-1">
+                          <Sparkles className="h-3 w-3 text-mtg-gold" />
+                          <button
+                            onClick={() => {
+                              const newQuantityFoil = Math.max(0, (uc.quantityFoil || 0) - 1);
+                              onUpdateQuantity?.(card.id, uc.quantity || 0, newQuantityFoil, uc.language);
+                            }}
+                            className="btn-icon-xs bg-red-600 hover:bg-red-700"
+                            disabled={!uc.quantityFoil || uc.quantityFoil <= 0}
+                          >
+                            <Minus className="h-2 w-2" />
+                          </button>
+                          <span className="text-white font-medium text-xs min-w-[1.5rem] text-center">
+                            {uc.quantityFoil || 0}
+                          </span>
+                          <button
+                            onClick={() => {
+                              const newQuantityFoil = (uc.quantityFoil || 0) + 1;
+                              onUpdateQuantity?.(card.id, uc.quantity || 0, newQuantityFoil, uc.language);
+                            }}
+                            className="btn-icon-xs bg-green-600 hover:bg-green-700"
+                          >
+                            <Plus className="h-2 w-2" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                   
-                  <span className="text-white font-medium min-w-[2rem] text-center">
-                    {userCard?.quantity || 0}
-                  </span>
-                  
+                  {/* Bouton pour ajouter dans une autre langue */}
                   <button
-                    onClick={() => {
-                      const newQuantity = (userCard?.quantity || 0) + 1;
-                      onUpdateQuantity?.(card.id, newQuantity, userCard?.quantityFoil || 0);
-                    }}
-                    className="btn-icon-sm bg-green-600 hover:bg-green-700"
+                    onClick={() => onOpenAddModal ? onOpenAddModal(card) : onAddToCollection?.(card.id, 1, false, 'fr')}
+                    className="text-xs text-gray-400 hover:text-white flex items-center gap-1 mt-1"
                   >
                     <Plus className="h-3 w-3" />
+                    Ajouter (autre langue)
                   </button>
-                  
-                  {/* Contrôle foil */}
-                  <div className="border-l border-gray-600 pl-2 ml-2 flex items-center gap-1">
-                    <Sparkles className="h-3 w-3 text-mtg-gold" />
-                    <button
-                      onClick={() => {
-                        const newQuantityFoil = Math.max(0, (userCard?.quantityFoil || 0) - 1);
-                        onUpdateQuantity?.(card.id, userCard?.quantity || 0, newQuantityFoil);
-                      }}
-                      className="btn-icon-sm bg-red-600 hover:bg-red-700"
-                      disabled={!userCard?.quantityFoil || userCard.quantityFoil <= 0}
-                    >
-                      <Minus className="h-3 w-3" />
-                    </button>
-                    
-                    <span className="text-white font-medium min-w-[1.5rem] text-center">
-                      {userCard?.quantityFoil || 0}
-                    </span>
-                    
-                    <button
-                      onClick={() => {
-                        const newQuantityFoil = (userCard?.quantityFoil || 0) + 1;
-                        onUpdateQuantity?.(card.id, userCard?.quantity || 0, newQuantityFoil);
-                      }}
-                      className="btn-icon-sm bg-green-600 hover:bg-green-700"
-                    >
-                      <Plus className="h-3 w-3" />
-                    </button>
-                  </div>
                 </div>
               ) : (
                 <button
-                  onClick={() => onAddToCollection?.(card.id, 1, false)}
+                  onClick={() => onOpenAddModal ? onOpenAddModal(card) : onAddToCollection?.(card.id, 1, false, 'fr')}
                   className="btn-primary text-xs px-3 py-1.5 w-full"
                 >
                   <Plus className="h-3 w-3 mr-1" />

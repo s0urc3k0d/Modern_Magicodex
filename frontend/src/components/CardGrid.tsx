@@ -17,9 +17,10 @@ interface CardGridProps {
   loading?: boolean;
   viewMode?: 'grid' | 'list';
   showFilters?: boolean;
-  onAddToCollection?: (cardId: string, quantity: number, foil?: boolean) => void;
-  onUpdateQuantity?: (cardId: string, newQuantity: number, newQuantityFoil: number) => void;
+  onAddToCollection?: (cardId: string, quantity: number, foil?: boolean, language?: string) => void;
+  onUpdateQuantity?: (cardId: string, newQuantity: number, newQuantityFoil: number, language?: string) => void;
   onAddToSale?: (cardId: string) => void;
+  onOpenAddModal?: (card: Card) => void;
   onViewModeChange?: (mode: 'grid' | 'list') => void;
   onFilterChange?: (filters: any) => void;
 }
@@ -34,6 +35,7 @@ const CardGrid = ({
   onAddToCollection,
   onUpdateQuantity,
   onAddToSale,
+  onOpenAddModal,
   onViewModeChange,
   onFilterChange
 }: CardGridProps) => {
@@ -52,13 +54,27 @@ const CardGrid = ({
   });
 
   // Créer un map des cartes utilisateur pour un accès rapide
-  const userCardMap = new Map(userCards.map(uc => [uc.cardId, uc]));
+  // Grouper par cardId pour supporter plusieurs langues
+  const userCardMap = new Map<string, UserCard>();
+  const userCardsByCardId = new Map<string, UserCard[]>();
+  
+  userCards.forEach(uc => {
+    // Pour la compatibilité, garder une entrée par cardId (la première trouvée)
+    if (!userCardMap.has(uc.cardId)) {
+      userCardMap.set(uc.cardId, uc);
+    }
+    // Regrouper toutes les entrées par cardId (pour les différentes langues)
+    const existing = userCardsByCardId.get(uc.cardId) || [];
+    existing.push(uc);
+    userCardsByCardId.set(uc.cardId, existing);
+  });
 
   // Déterminer la liste des cartes à filtrer
   // Si on a des userCards, utiliser les cartes de la collection avec leurs relations
   // Sinon, utiliser les cartes passées directement
+  // Pour éviter les doublons (même cardId avec différentes langues), utiliser un Set
   const allCards = userCards.length > 0 
-    ? userCards.map((uc: any) => uc.card) 
+    ? Array.from(new Map(userCards.map((uc: any) => [uc.cardId, uc.card])).values())
     : cards;
 
   // Extraire les extensions uniques de la collection utilisateur
@@ -164,10 +180,13 @@ const CardGrid = ({
           key={card.id}
           card={card}
           userCard={userCardMap.get(card.id)}
+          userCardsByLang={userCardsByCardId.get(card.id)}
+          forSaleQuantity={forSaleData[card.id]}
           viewMode={viewMode}
           onAddToCollection={onAddToCollection}
           onUpdateQuantity={onUpdateQuantity}
           onAddToSale={onAddToSale}
+          onOpenAddModal={onOpenAddModal}
           onToggleListItem={async (cardId, type) => {
             try {
               const existing = listsData?.find((li: any) => li.cardId === cardId && li.type === type);
@@ -393,11 +412,13 @@ const CardGrid = ({
                 key={card.id}
                 card={card}
                 userCard={userCardMap.get(card.id)}
+                userCardsByLang={userCardsByCardId.get(card.id)}
                 forSaleQuantity={forSaleData[card.id]}
                 viewMode={viewMode}
                 onAddToCollection={onAddToCollection}
                 onUpdateQuantity={onUpdateQuantity}
                 onAddToSale={onAddToSale}
+                onOpenAddModal={onOpenAddModal}
               />
             ))}
           </AnimatePresence>

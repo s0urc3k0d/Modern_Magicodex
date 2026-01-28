@@ -444,19 +444,19 @@ export class CollectionService {
       throw new Error('Carte non trouvée');
     }
 
-    // Upsert de la carte dans la collection
+    // Upsert de la carte dans la collection (clé unique: userId + cardId + language)
     const userCard = await prisma.userCard.upsert({
       where: {
-        userId_cardId: {
+        userId_cardId_language: {
           userId,
-          cardId: validatedData.cardId
+          cardId: validatedData.cardId,
+          language: validatedData.language
         }
       },
       update: {
         quantity: validatedData.quantity,
         quantityFoil: validatedData.quantityFoil,
         condition: validatedData.condition,
-        language: validatedData.language,
         notes: validatedData.notes
       },
       create: {
@@ -490,24 +490,27 @@ export class CollectionService {
   async bulkAddOrUpdate(userId: string, payload: z.infer<typeof bulkAddSchema>) {
     const { items, mode } = bulkAddSchema.parse(payload);
 
-    // Deduplicate by cardId (sum quantities for increment mode)
-    const dedup = new Map<string, { quantity: number; quantityFoil: number; condition?: string; language?: string; notes?: string }>();
+    // Deduplicate by cardId+language (sum quantities for increment mode)
+    const dedup = new Map<string, { cardId: string; quantity: number; quantityFoil: number; condition?: string; language: string; notes?: string }>();
     for (const it of items) {
-      const existing = dedup.get(it.cardId);
+      const lang = it.language || 'en';
+      const key = `${it.cardId}::${lang}`;
+      const existing = dedup.get(key);
       if (existing) {
         existing.quantity += it.quantity;
         existing.quantityFoil += it.quantityFoil;
       } else {
-        dedup.set(it.cardId, { quantity: it.quantity, quantityFoil: it.quantityFoil, condition: it.condition, language: it.language, notes: it.notes });
+        dedup.set(key, { cardId: it.cardId, quantity: it.quantity, quantityFoil: it.quantityFoil, condition: it.condition, language: lang, notes: it.notes });
       }
     }
-    const finalItems = Array.from(dedup.entries()).map(([cardId, data]) => ({ cardId, ...data }));
+    const finalItems = Array.from(dedup.values());
 
-    // Fetch existing userCards for these cardIds
+    // Fetch existing userCards for these cardIds (all languages)
     const existingUserCards = await prisma.userCard.findMany({
       where: { userId, cardId: { in: finalItems.map(f => f.cardId) } }
     });
-  const existingMap = new Map(existingUserCards.map((uc: any) => [uc.cardId, uc]));
+    // Map by cardId+language
+    const existingMap = new Map(existingUserCards.map((uc: any) => [`${uc.cardId}::${uc.language}`, uc]));
 
     let affected = 0;
     let created = 0;
@@ -523,7 +526,8 @@ export class CollectionService {
           // Validate card existence (skip silently if not found)
             const card = await tx.card.findUnique({ where: { id: entry.cardId } });
             if (!card) continue;
-          const existing: any = existingMap.get(entry.cardId);
+          const mapKey = `${entry.cardId}::${entry.language}`;
+          const existing: any = existingMap.get(mapKey);
           if (!existing) {
             if (entry.quantity === 0 && entry.quantityFoil === 0) continue; // nothing to insert
             await tx.userCard.create({
@@ -551,12 +555,12 @@ export class CollectionService {
 
             if (newQuantity === 0 && newQuantityFoil === 0) {
               await tx.userCard.delete({
-                where: { userId_cardId: { userId, cardId: entry.cardId } }
+                where: { userId_cardId_language: { userId, cardId: entry.cardId, language: entry.language } }
               });
               deleted += 1; affected += 1;
             } else {
               await tx.userCard.update({
-                where: { userId_cardId: { userId, cardId: entry.cardId } },
+                where: { userId_cardId_language: { userId, cardId: entry.cardId, language: entry.language } },
                 data: {
                   quantity: newQuantity,
                   quantityFoil: newQuantityFoil,
@@ -585,19 +589,22 @@ export class CollectionService {
 
   /**
    * Met à jour une carte dans la collection
+   * Note: language est requis car la clé unique est (userId, cardId, language)
    */
   async updateCardInCollection(
     userId: string, 
-    cardId: string, 
+    cardId: string,
+    language: string,
     data: z.infer<typeof updateCardInCollectionSchema>
   ) {
     const validatedData = updateCardInCollectionSchema.parse(data);
 
     const userCard = await prisma.userCard.findUnique({
       where: {
-        userId_cardId: {
+        userId_cardId_language: {
           userId,
-          cardId
+          cardId,
+          language
         }
       }
     });
@@ -610,9 +617,10 @@ export class CollectionService {
     if (validatedData.quantity === 0 && validatedData.quantityFoil === 0) {
       await prisma.userCard.delete({
         where: {
-          userId_cardId: {
+          userId_cardId_language: {
             userId,
-            cardId
+            cardId,
+            language
           }
         }
       });
@@ -621,9 +629,10 @@ export class CollectionService {
 
     const updatedUserCard = await prisma.userCard.update({
       where: {
-        userId_cardId: {
+        userId_cardId_language: {
           userId,
-          cardId
+          cardId,
+          language
         }
       },
       data: validatedData,
@@ -641,13 +650,15 @@ export class CollectionService {
 
   /**
    * Supprime une carte de la collection
+   * Note: language est requis car la clé unique est (userId, cardId, language)
    */
-  async removeCardFromCollection(userId: string, cardId: string) {
+  async removeCardFromCollection(userId: string, cardId: string, language: string) {
     const userCard = await prisma.userCard.findUnique({
       where: {
-        userId_cardId: {
+        userId_cardId_language: {
           userId,
-          cardId
+          cardId,
+          language
         }
       }
     });
@@ -658,9 +669,10 @@ export class CollectionService {
 
     await prisma.userCard.delete({
       where: {
-        userId_cardId: {
+        userId_cardId_language: {
           userId,
-          cardId
+          cardId,
+          language
         }
       }
     });

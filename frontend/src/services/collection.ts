@@ -68,28 +68,41 @@ export const collectionService = {
     return response.data;
   },
 
-  async addCard(cardId: string, quantity: number, isFoil = false) {
+  async addCard(cardId: string, quantity: number, isFoil = false, language = 'en') {
     const response = await api.post('/collection/cards', {
       cardId,
-      quantity,
-      quantityFoil: isFoil ? 1 : 0,
+      quantity: isFoil ? 0 : quantity,
+      quantityFoil: isFoil ? quantity : 0,
+      language,
     });
     return response.data;
   },
 
-  async addCardsBulk(items: Array<{ cardId: string; quantity: number; quantityFoil?: number }>, mode: 'increment' | 'set' = 'increment') {
+  async addCardWithDetails(cardId: string, data: { quantity: number; quantityFoil: number; language: string; condition?: string }) {
+    const response = await api.post('/collection/cards', {
+      cardId,
+      quantity: data.quantity,
+      quantityFoil: data.quantityFoil,
+      language: data.language,
+      condition: data.condition || 'NM',
+    });
+    return response.data;
+  },
+
+  async addCardsBulk(items: Array<{ cardId: string; quantity: number; quantityFoil?: number; language?: string }>, mode: 'increment' | 'set' = 'increment') {
     const response = await api.post('/collection/cards/bulk', {
       items: items.map(i => ({
         cardId: i.cardId,
         quantity: i.quantity,
-        quantityFoil: i.quantityFoil ?? 0
+        quantityFoil: i.quantityFoil ?? 0,
+        language: i.language ?? 'en'
       })),
       mode
     });
     return response.data as { success: boolean; summary: any };
   },
 
-  async updateCard(cardId: string, quantity: number, quantityFoil?: number) {
+  async updateCard(cardId: string, quantity: number, quantityFoil?: number, language = 'en') {
     const data: any = {};
     
     if (quantity !== undefined) {
@@ -100,12 +113,12 @@ export const collectionService = {
       data.quantityFoil = quantityFoil;
     }
     
-    const response = await api.put(`/collection/cards/${cardId}`, data);
+    const response = await api.put(`/collection/cards/${cardId}?language=${encodeURIComponent(language)}`, data);
     return response.data;
   },
 
-  async removeCard(cardId: string) {
-    const response = await api.delete(`/collection/cards/${cardId}`);
+  async removeCard(cardId: string, language = 'en') {
+    const response = await api.delete(`/collection/cards/${cardId}?language=${encodeURIComponent(language)}`);
     return response.data;
   },
 

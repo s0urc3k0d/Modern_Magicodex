@@ -137,7 +137,8 @@ model UserCard {
   cardId         String
   card           Card      @relation(fields: [cardId], references: [id])
   
-  @@unique([userId, cardId])
+  // Allow multiple entries per card with different languages
+  @@unique([userId, cardId, language])
   @@index([userId])
   @@index([cardId])
   @@map("user_cards")

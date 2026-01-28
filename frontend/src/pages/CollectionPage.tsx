@@ -8,6 +8,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import AddCardModal from '../components/AddCardModal';
 import BulkAddBySetModal from '../components/BulkAddBySetModal';
 import AddToSaleModal from '../components/AddToSaleModal';
+import AddToCollectionModal from '../components/AddToCollectionModal';
 import CardGrid from '../components/CardGrid';
 import CollectionBySet from '../components/CollectionBySet';
 import toast from 'react-hot-toast';
@@ -21,6 +22,7 @@ const CollectionPage = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showBulkSetModal, setShowBulkSetModal] = useState(false);
   const [saleModalData, setSaleModalData] = useState<{ card: Card; userCard: UserCard } | null>(null);
+  const [addCollectionModalCard, setAddCollectionModalCard] = useState<Card | null>(null);
   // Advanced filters
   const [rarity, setRarity] = useState('');
   const [colors, setColors] = useState<string[]>([]);
@@ -124,13 +126,28 @@ const CollectionPage = () => {
 
   // Mutations pour gérer la collection
   const addToCollectionMutation = useMutation({
-    mutationFn: ({ cardId, quantity, foil }: { cardId: string; quantity: number; foil?: boolean }) =>
-  collectionService.addCard(cardId, quantity, foil),
+    mutationFn: ({ cardId, quantity, foil, language }: { cardId: string; quantity: number; foil?: boolean; language?: string }) =>
+      collectionService.addCard(cardId, quantity, foil, language || 'fr'),
     onSuccess: () => {
       toast.success('Carte ajoutée à votre collection !');
       queryClient.invalidateQueries({ queryKey: ['collection'] });
       queryClient.invalidateQueries({ queryKey: ['collection-stats'] });
-  queryClient.invalidateQueries({ predicate: (q: any) => Array.isArray(q.queryKey) && q.queryKey[0] === 'deck-owned' });
+      queryClient.invalidateQueries({ predicate: (q: any) => Array.isArray(q.queryKey) && q.queryKey[0] === 'deck-owned' });
+    },
+    onError: () => {
+      toast.error('Erreur lors de l\'ajout de la carte');
+    },
+  });
+
+  // Mutation pour ajout avec détails (depuis modal)
+  const addToCollectionWithDetailsMutation = useMutation({
+    mutationFn: (data: { cardId: string; quantity: number; quantityFoil: number; language: string }) =>
+      collectionService.addCardWithDetails(data.cardId, data),
+    onSuccess: () => {
+      toast.success('Carte ajoutée à votre collection !');
+      queryClient.invalidateQueries({ queryKey: ['collection'] });
+      queryClient.invalidateQueries({ queryKey: ['collection-stats'] });
+      queryClient.invalidateQueries({ predicate: (q: any) => Array.isArray(q.queryKey) && q.queryKey[0] === 'deck-owned' });
     },
     onError: () => {
       toast.error('Erreur lors de l\'ajout de la carte');
@@ -138,17 +155,13 @@ const CollectionPage = () => {
   });
 
   const updateQuantityMutation = useMutation({
-    mutationFn: ({ cardId, quantity, quantityFoil, userCard }: { 
+    mutationFn: ({ cardId, quantity, quantityFoil, language }: { 
       cardId: string; 
-      quantity?: number; 
-      quantityFoil?: number;
-      userCard: any;
+      quantity: number; 
+      quantityFoil: number;
+      language: string;
     }) => {
-      // Préparer les nouvelles quantités
-      const newQuantity = quantity !== undefined ? quantity : userCard.quantity;
-      const newQuantityFoil = quantityFoil !== undefined ? quantityFoil : userCard.quantityFoil;
-      
-      return collectionService.updateCard(cardId, newQuantity, newQuantityFoil);
+      return collectionService.updateCard(cardId, quantity, quantityFoil, language);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['collection'] });
@@ -160,20 +173,16 @@ const CollectionPage = () => {
     },
   });
 
-  const handleAddToCollection = (cardId: string, quantity: number, foil = false) => {
-    addToCollectionMutation.mutate({ cardId, quantity, foil });
+  const handleAddToCollection = (cardId: string, quantity: number, foil = false, language = 'fr') => {
+    addToCollectionMutation.mutate({ cardId, quantity, foil, language });
   };
 
-  const handleUpdateQuantity = (cardId: string, newQuantity: number, newQuantityFoil: number) => {
-    // Récupérer la carte utilisateur actuelle
-    const userCard = collectionData?.userCards?.find((uc: any) => uc.cardId === cardId);
-    if (!userCard) return;
-
+  const handleUpdateQuantity = (cardId: string, newQuantity: number, newQuantityFoil: number, language = 'en') => {
     updateQuantityMutation.mutate({ 
       cardId, 
       quantity: newQuantity,
       quantityFoil: newQuantityFoil,
-      userCard 
+      language 
     });
   };
 
@@ -536,22 +545,24 @@ const CollectionPage = () => {
   ) : (collectionData?.userCards?.length || 0) > 0 ? (
         groupBySet ? (
           <CollectionBySet
-    userCards={filteredUserCards}
+            userCards={filteredUserCards}
             viewMode={viewMode}
             onUpdateQuantity={handleUpdateQuantity}
             onAddToSale={handleAddToSale}
+            onOpenAddModal={setAddCollectionModalCard}
             searchQuery={searchQuery}
             forSaleData={forSaleData || {}}
           />
         ) : (
           <CardGrid
-    userCards={filteredUserCards}
+            userCards={filteredUserCards}
             forSaleData={forSaleData || {}}
             viewMode={viewMode}
             showFilters={showFilters}
             onAddToCollection={handleAddToCollection}
             onUpdateQuantity={handleUpdateQuantity}
             onAddToSale={handleAddToSale}
+            onOpenAddModal={setAddCollectionModalCard}
             onViewModeChange={setViewMode}
             onFilterChange={() => setShowFilters(!showFilters)}
             // CardGrid will handle wishlist/trade via its internal handler
@@ -587,6 +598,20 @@ const CollectionPage = () => {
         isOpen={showBulkSetModal}
         onClose={() => setShowBulkSetModal(false)}
       />
+
+      {/* Modal d'ajout avec choix de langue */}
+      <AnimatePresence>
+        {addCollectionModalCard && (
+          <AddToCollectionModal
+            card={addCollectionModalCard}
+            onClose={() => setAddCollectionModalCard(null)}
+            onConfirm={(data) => {
+              addToCollectionWithDetailsMutation.mutate(data);
+              setAddCollectionModalCard(null);
+            }}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Modal de mise en vente */}
       <AnimatePresence>
