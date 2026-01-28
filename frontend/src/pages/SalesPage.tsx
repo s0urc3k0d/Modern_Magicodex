@@ -10,11 +10,10 @@ import toast from 'react-hot-toast';
 
 import { 
   salesService, 
-  SaleItem, 
   CARDMARKET_CONDITIONS, 
   LANGUAGES,
-  UpdateSaleData 
 } from '../services/sales';
+import type { SaleItem, UpdateSaleData } from '../services/sales';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 // Modal d'édition d'un item de vente
