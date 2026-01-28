@@ -19,6 +19,7 @@ const MissingBySetPage = lazy(() => import('./pages/MissingBySetPage'));
 const CollectionStatsPage = lazy(() => import('./pages/CollectionStatsPage'));
 const ListsPage = lazy(() => import('./pages/ListsPage'));
 const ScanPage = lazy(() => import('./pages/ScanPage'));
+const SalesPage = lazy(() => import('./pages/SalesPage'));
 import RequireAdmin from './components/RequireAdmin';
 
 // Context
@@ -56,6 +57,7 @@ function App() {
                 <Route path="collection/missing" element={<MissingBySetPage />} />
                 <Route path="collection/stats" element={<CollectionStatsPage />} />
                 <Route path="lists" element={<ListsPage />} />
+                <Route path="sales" element={<SalesPage />} />
                 <Route path="scan" element={<RequireAdmin><ScanPage /></RequireAdmin>} />
                 <Route path="decks" element={<DecksPage />} />
                 <Route path="decks/view/:id" element={<DeckViewPage />} />

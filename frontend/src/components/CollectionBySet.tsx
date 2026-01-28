@@ -12,6 +12,7 @@ interface CollectionBySetProps {
   userCards: UserCard[];
   viewMode?: 'grid' | 'list';
   onUpdateQuantity?: (cardId: string, newQuantity: number, newQuantityFoil: number) => void;
+  onAddToSale?: (cardId: string) => void;
   searchQuery?: string;
   selectedRarity?: string;
   selectedColors?: string[];
@@ -35,10 +36,11 @@ interface SetGroupSectionProps {
   toggleKey: (key: string) => void;
   sortUserCards: (arr: any[]) => any[];
   onUpdateQuantity?: (cardId: string, newQuantity: number, newQuantityFoil: number) => void;
+  onAddToSale?: (cardId: string) => void;
   handleToggleListItem: (cardId: string, type: any) => Promise<null>;
 }
 
-const SetGroupSection = ({ group, viewMode, isStdExpanded, isXExpanded, toggleKey, sortUserCards, onUpdateQuantity, handleToggleListItem }: SetGroupSectionProps) => {
+const SetGroupSection = ({ group, viewMode, isStdExpanded, isXExpanded, toggleKey, sortUserCards, onUpdateQuantity, onAddToSale, handleToggleListItem }: SetGroupSectionProps) => {
   // Separate queries per group; only run when expanded
   const { data: standardPage, isLoading: standardLoading } = useQuery({
     queryKey: ['set-standard-count', group.set.id],
@@ -132,6 +134,7 @@ const SetGroupSection = ({ group, viewMode, isStdExpanded, isXExpanded, toggleKe
                   {sortUserCards(standardCards).map((uc: any) => (
                     <CardDisplay key={uc.id} card={uc.card} userCard={uc}
                       onUpdateQuantity={onUpdateQuantity}
+                      onAddToSale={onAddToSale}
                       onToggleListItem={handleToggleListItem}
                       showQuantityControls={true}
                     />
@@ -142,6 +145,7 @@ const SetGroupSection = ({ group, viewMode, isStdExpanded, isXExpanded, toggleKe
                   {sortUserCards(standardCards).map((uc: any) => (
                     <CardDisplay key={uc.id} card={uc.card} userCard={uc}
                       onUpdateQuantity={onUpdateQuantity}
+                      onAddToSale={onAddToSale}
                       onToggleListItem={handleToggleListItem}
                       showQuantityControls={true}
                       viewMode="list"
@@ -205,6 +209,7 @@ const SetGroupSection = ({ group, viewMode, isStdExpanded, isXExpanded, toggleKe
                   {sortUserCards(extraCards).map((uc: any) => (
                     <CardDisplay key={uc.id} card={uc.card} userCard={uc}
                       onUpdateQuantity={onUpdateQuantity}
+                      onAddToSale={onAddToSale}
                       onToggleListItem={handleToggleListItem}
                       showQuantityControls={true}
                     />
@@ -215,6 +220,7 @@ const SetGroupSection = ({ group, viewMode, isStdExpanded, isXExpanded, toggleKe
                   {sortUserCards(extraCards).map((uc: any) => (
                     <CardDisplay key={uc.id} card={uc.card} userCard={uc}
                       onUpdateQuantity={onUpdateQuantity}
+                      onAddToSale={onAddToSale}
                       onToggleListItem={handleToggleListItem}
                       showQuantityControls={true}
                       viewMode="list"
@@ -234,6 +240,7 @@ const CollectionBySet = ({
   userCards,
   viewMode = 'grid',
   onUpdateQuantity,
+  onAddToSale,
   searchQuery = '',
   selectedRarity = '',
   selectedColors = [],
@@ -378,6 +385,7 @@ const CollectionBySet = ({
             toggleKey={toggleKey}
             sortUserCards={sortUserCards}
             onUpdateQuantity={onUpdateQuantity}
+            onAddToSale={onAddToSale}
             handleToggleListItem={handleToggleListItem}
           />
         );

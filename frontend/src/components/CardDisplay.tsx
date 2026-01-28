@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Minus, Eye, Sparkles } from 'lucide-react';
+import { Plus, Minus, Eye, Sparkles, ShoppingCart } from 'lucide-react';
 import type { Card, UserCard, ListType, UserListItem } from '../types';
 import { ManaCost } from './ManaSymbol';
 import { normalizeCardBasics, pickCardImageUrl, getCardPriceEUR } from '../domain/cards/normalize';
@@ -11,6 +11,7 @@ interface CardDisplayProps {
   onAddToCollection?: (cardId: string, quantity: number, foil?: boolean) => void;
   onUpdateQuantity?: (cardId: string, newQuantity: number, newQuantityFoil: number) => void;
   onToggleListItem?: (cardId: string, type: ListType) => Promise<UserListItem | null> | void;
+  onAddToSale?: (cardId: string) => void;
   showQuantityControls?: boolean;
   viewMode?: 'grid' | 'list';
 }
@@ -21,6 +22,7 @@ const CardDisplay = ({
   onAddToCollection,
   onUpdateQuantity,
   onToggleListItem,
+  onAddToSale,
   showQuantityControls = true,
   viewMode = 'grid'
 }: CardDisplayProps) => {
@@ -162,7 +164,7 @@ const CardDisplay = ({
           </div>
 
           {/* Wishlist / Trade quick actions */}
-          <div className="mt-2 flex items-center gap-2">
+          <div className="mt-2 flex items-center gap-2 flex-wrap">
             <button
               title="Ajouter/retirer de la Wishlist"
               onClick={() => handleToggleList('WISHLIST')}
@@ -177,6 +179,16 @@ const CardDisplay = ({
             >
               Trade
             </button>
+            {onAddToSale && isOwned && (
+              <button
+                title="Mettre en vente"
+                onClick={() => onAddToSale(card.id)}
+                className="text-xs px-2 py-1 rounded border border-mtg-gold text-mtg-gold hover:bg-mtg-gold hover:text-mtg-black flex items-center gap-1"
+              >
+                <ShoppingCart className="w-3 h-3" />
+                Vendre
+              </button>
+            )}
           </div>
 
           {/* Contrôles de quantité */}
@@ -351,7 +363,7 @@ const CardDisplay = ({
         </div>
 
         {/* Wishlist / Trade quick actions */}
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center gap-2 mb-2 flex-wrap">
           <button
             title="Ajouter/retirer de la Wishlist"
             onClick={() => handleToggleList('WISHLIST')}
@@ -366,6 +378,16 @@ const CardDisplay = ({
           >
             Trade
           </button>
+          {onAddToSale && isOwned && (
+            <button
+              title="Mettre en vente"
+              onClick={() => onAddToSale(card.id)}
+              className="text-xs px-2 py-1 rounded border border-mtg-gold text-mtg-gold hover:bg-mtg-gold hover:text-mtg-black flex items-center gap-1"
+            >
+              <ShoppingCart className="w-3 h-3" />
+              Vendre
+            </button>
+          )}
         </div>
 
         {/* Contrôles de quantité */}

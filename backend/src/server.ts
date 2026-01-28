@@ -34,6 +34,7 @@ import adminRoutes from './routes/admin';
 // import adminOptimizedRoutes from './routes/admin-optimized';
 import adminCleanRoutes from './routes/admin-clean';
 import rulesRoutes from './routes/rules';
+import salesRoutes from './routes/sales';
 
 // Import services
 import { ScryfallService } from './services/scryfall';
@@ -170,6 +171,7 @@ app.use('/api/admin', adminRoutes);
 // app.use('/api/admin-optimized', authenticateToken, requireAdmin, adminOptimizedRoutes);
 app.use('/api/admin-clean', authenticateToken, requireAdmin, adminCleanRoutes);
 app.use('/api/rules', rulesRoutes);
+app.use('/api/sales', salesRoutes);
 
 // Error handling
 app.use(errorHandler);

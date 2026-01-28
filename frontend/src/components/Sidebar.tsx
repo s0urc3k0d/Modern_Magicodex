@@ -6,7 +6,8 @@ import {
   User,
   Crown,
   BookOpen,
-  Sparkles
+  Sparkles,
+  ShoppingCart
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -20,6 +21,7 @@ const Sidebar = () => {
   { name: 'Manquantes', href: '/collection/missing', icon: Sparkles },
   { name: 'Statistiques', href: '/collection/stats', icon: BookOpen },
   { name: 'Wishlist & Trade', href: '/lists', icon: BookOpen },
+  { name: 'Mes Ventes', href: '/sales', icon: ShoppingCart },
   // Le scanner est expérimental: afficher uniquement pour les admins
   ...(user?.isAdmin ? [{ name: 'Scanner', href: '/scan', icon: Sparkles }] : [] as any),
     { name: 'Decks', href: '/decks', icon: Layers },

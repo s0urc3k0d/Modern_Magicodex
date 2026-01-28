@@ -18,7 +18,16 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const extraFrameEffects = ['extendedart', 'showcase', 'borderless', 'etched', 'inverted', 'shatteredglass', 'textless', 'fandfc'];
+// NOT included: fullart, legendary, enchantment, miracle, nyxtouched, companion, etc. (normal card frames)
+const extraFrameEffects = ['extendedart', 'showcase', 'borderless', 'etched', 'inverted', 'shatteredglass', 'textless'];
+
+// PromoTypes that do NOT indicate extras - they're just markers for set type or normal variants
+const NON_EXTRA_PROMO_TYPES = [
+  'universesbeyond',  // Collaboration sets (Marvel, Avatar, Final Fantasy, etc.)
+  'boosterfun',       // Alternative art variants found in normal boosters
+  'ffi', 'ffii', 'ffiii', 'ffiv', 'ffv', 'ffvi', 'ffvii', 'ffviii', 'ffix', 'ffx', 
+  'ffxi', 'ffxii', 'ffxiii', 'ffxiv', 'ffxv', 'ffxvi',  // Final Fantasy markers
+];
 
 function computeIsExtraCorrected(card: {
   booster: boolean | null;
@@ -51,8 +60,13 @@ function computeIsExtraCorrected(card: {
   const hasSpecialFrame = Array.isArray(frameEffects) && 
     frameEffects.some((f) => extraFrameEffects.includes(f.toLowerCase()));
 
-  // Promo cards are extras
-  const hasPromo = card.promo === true || (Array.isArray(promoTypes) && promoTypes.length > 0);
+  // Filter out non-extra promo types before checking
+  const significantPromoTypes = Array.isArray(promoTypes) 
+    ? promoTypes.filter(pt => !NON_EXTRA_PROMO_TYPES.includes(pt.toLowerCase()))
+    : [];
+
+  // Promo cards are extras only if they have significant promo types
+  const hasPromo = card.promo === true || significantPromoTypes.length > 0;
 
   // Cards not found in boosters are extras (only if explicitly false)
   const isNonBooster = card.booster === false;

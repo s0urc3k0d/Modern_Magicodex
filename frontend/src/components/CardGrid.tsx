@@ -18,6 +18,7 @@ interface CardGridProps {
   showFilters?: boolean;
   onAddToCollection?: (cardId: string, quantity: number, foil?: boolean) => void;
   onUpdateQuantity?: (cardId: string, newQuantity: number, newQuantityFoil: number) => void;
+  onAddToSale?: (cardId: string) => void;
   onViewModeChange?: (mode: 'grid' | 'list') => void;
   onFilterChange?: (filters: any) => void;
 }
@@ -30,6 +31,7 @@ const CardGrid = ({
   showFilters = false,
   onAddToCollection,
   onUpdateQuantity,
+  onAddToSale,
   onViewModeChange,
   onFilterChange
 }: CardGridProps) => {
@@ -163,6 +165,7 @@ const CardGrid = ({
           viewMode={viewMode}
           onAddToCollection={onAddToCollection}
           onUpdateQuantity={onUpdateQuantity}
+          onAddToSale={onAddToSale}
           onToggleListItem={async (cardId, type) => {
             try {
               const existing = listsData?.find((li: any) => li.cardId === cardId && li.type === type);
@@ -391,6 +394,7 @@ const CardGrid = ({
                 viewMode={viewMode}
                 onAddToCollection={onAddToCollection}
                 onUpdateQuantity={onUpdateQuantity}
+                onAddToSale={onAddToSale}
               />
             ))}
           </AnimatePresence>

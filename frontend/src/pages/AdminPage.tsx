@@ -17,6 +17,7 @@ ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarEle
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'sync' | 'performance'>('overview');
   const [setCode, setSetCode] = useState('dmu');
+  const [forceSync, setForceSync] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: stats, isLoading: statsLoading } = useQuery({ queryKey: ['admin-stats'], queryFn: () => adminService.getStats() });
@@ -138,7 +139,11 @@ const AdminPage = () => {
                     <label className="block text-xs text-gray-400 mb-1">Code d'extension (ex: dmu)</label>
                     <input value={setCode} onChange={(e) => setSetCode(e.target.value)} placeholder="dmu" className="input w-full" />
                   </div>
-                  <button onClick={() => { if (!setCode) return toast.error('Entrez un code de set'); adminService.syncHybridCards(setCode, false).then(() => toast.success(`Sync ${setCode.toUpperCase()} démarrée !`)).catch(() => toast.error('Erreur sync set')); }} className="btn-primary">Sync set</button>
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" id="forceSync" checked={forceSync} onChange={(e) => setForceSync(e.target.checked)} className="w-4 h-4" />
+                    <label htmlFor="forceSync" className="text-xs text-gray-400">Force</label>
+                  </div>
+                  <button onClick={() => { if (!setCode) return toast.error('Entrez un code de set'); adminService.syncHybridCards(setCode, forceSync).then(() => toast.success(`Sync ${setCode.toUpperCase()} démarrée !`)).catch(() => toast.error('Erreur sync set')); }} className="btn-primary">Sync set</button>
                 </div>
               </div>
               <div className="bg-mtg-background p-4 rounded-lg border border-gray-600">

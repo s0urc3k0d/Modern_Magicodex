@@ -13,6 +13,7 @@ datasource db {
 enum ListType {
   WISHLIST
   TRADE
+  FORSALE
 }
 
 model User {
@@ -115,9 +116,18 @@ model UserCard {
   id              String    @id @default(cuid())
   quantity        Int       @default(1)
   quantityFoil    Int       @default(0)
-  condition       String    @default("NM") // NM, LP, MP, HP, DMG
-  language        String    @default("en")
+  condition       String    @default("NM") // MT, NM, EX, GD, LP, PL, PO (Cardmarket standard)
+  language        String    @default("en") // en, fr, de, es, it, pt, ja, ko, ru, zhs, zht
+  isSigned        Boolean   @default(false)
+  isAltered       Boolean   @default(false)
+  isFirstEd       Boolean   @default(false) // Pour Yu-Gi-Oh principalement
   notes           String?
+  // Champs pour la vente
+  forSale         Boolean   @default(false)
+  forSaleQuantity Int       @default(0)     // Quantité à vendre (normal)
+  forSaleFoil     Int       @default(0)     // Quantité foil à vendre
+  askingPrice     Float?                    // Prix demandé (EUR)
+  askingPriceFoil Float?                    // Prix demandé foil (EUR)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   
@@ -182,6 +192,13 @@ model UserListItem {
   type        ListType
   quantity    Int      @default(1)
   notes       String?
+  // Champs pour la vente (type=FORSALE)
+  condition   String   @default("NM")  // MT, NM, EX, GD, LP, PL, PO
+  language    String   @default("en")
+  isFoil      Boolean  @default(false)
+  isSigned    Boolean  @default(false)
+  isAltered   Boolean  @default(false)
+  askingPrice Float?                    // Prix demandé (EUR)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

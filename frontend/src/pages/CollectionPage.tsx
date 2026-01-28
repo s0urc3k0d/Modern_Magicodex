@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Search, Plus, Grid, List, Package, Layers, Download } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { collectionService } from '../services/collection';
+import { salesService } from '../services/sales';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AddCardModal from '../components/AddCardModal';
 import BulkAddBySetModal from '../components/BulkAddBySetModal';
@@ -165,6 +166,27 @@ const CollectionPage = () => {
       quantityFoil: newQuantityFoil,
       userCard 
     });
+  };
+
+  // Mutation pour ajouter une carte à la liste de vente
+  const addToSaleMutation = useMutation({
+    mutationFn: (cardId: string) => salesService.addToSale({
+      cardId,
+      condition: 'NM',
+      language: 'French',
+      isFoil: false,
+    }),
+    onSuccess: () => {
+      toast.success('Carte ajoutée à votre liste de vente !');
+      queryClient.invalidateQueries({ queryKey: ['sales'] });
+    },
+    onError: () => {
+      toast.error('Erreur lors de l\'ajout à la vente');
+    },
+  });
+
+  const handleAddToSale = (cardId: string) => {
+    addToSaleMutation.mutate(cardId);
   };
 
   const isLoading = statsLoading || collectionLoading;
@@ -477,6 +499,7 @@ const CollectionPage = () => {
     userCards={filteredUserCards}
             viewMode={viewMode}
             onUpdateQuantity={handleUpdateQuantity}
+            onAddToSale={handleAddToSale}
             searchQuery={searchQuery}
           />
         ) : (
@@ -486,6 +509,7 @@ const CollectionPage = () => {
             showFilters={showFilters}
             onAddToCollection={handleAddToCollection}
             onUpdateQuantity={handleUpdateQuantity}
+            onAddToSale={handleAddToSale}
             onViewModeChange={setViewMode}
             onFilterChange={() => setShowFilters(!showFilters)}
             // CardGrid will handle wishlist/trade via its internal handler
