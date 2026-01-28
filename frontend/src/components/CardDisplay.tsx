@@ -489,7 +489,7 @@ const CardDisplay = ({
               </>
             ) : (
               <button
-                onClick={() => onAddToCollection?.(card.id, 1, false)}
+                onClick={() => onOpenAddModal ? onOpenAddModal(card) : onAddToCollection?.(card.id, 1, false, 'fr')}
                 className="btn-primary px-4 py-2"
               >
                 <Plus className="h-4 w-4 mr-2" />
