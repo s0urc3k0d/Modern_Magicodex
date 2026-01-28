@@ -177,7 +177,7 @@ const CollectionPage = () => {
     addToCollectionMutation.mutate({ cardId, quantity, foil, language });
   };
 
-  const handleUpdateQuantity = (cardId: string, newQuantity: number, newQuantityFoil: number, language = 'en') => {
+  const handleUpdateQuantity = (cardId: string, newQuantity: number, newQuantityFoil: number, language = 'fr') => {
     updateQuantityMutation.mutate({ 
       cardId, 
       quantity: newQuantity,

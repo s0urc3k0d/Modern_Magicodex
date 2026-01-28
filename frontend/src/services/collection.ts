@@ -68,7 +68,7 @@ export const collectionService = {
     return response.data;
   },
 
-  async addCard(cardId: string, quantity: number, isFoil = false, language = 'en') {
+  async addCard(cardId: string, quantity: number, isFoil = false, language = 'fr') {
     const response = await api.post('/collection/cards', {
       cardId,
       quantity: isFoil ? 0 : quantity,
@@ -102,7 +102,7 @@ export const collectionService = {
     return response.data as { success: boolean; summary: any };
   },
 
-  async updateCard(cardId: string, quantity: number, quantityFoil?: number, language = 'en') {
+  async updateCard(cardId: string, quantity: number, quantityFoil?: number, language = 'fr') {
     const data: any = {};
     
     if (quantity !== undefined) {
@@ -117,7 +117,7 @@ export const collectionService = {
     return response.data;
   },
 
-  async removeCard(cardId: string, language = 'en') {
+  async removeCard(cardId: string, language = 'fr') {
     const response = await api.delete(`/collection/cards/${cardId}?language=${encodeURIComponent(language)}`);
     return response.data;
   },
