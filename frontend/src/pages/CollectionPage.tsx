@@ -173,8 +173,7 @@ const CollectionPage = () => {
     mutationFn: (cardId: string) => salesService.addToSale({
       cardId,
       condition: 'NM',
-      language: 'French',
-      isFoil: false,
+      language: 'fr',
     }),
     onSuccess: () => {
       toast.success('Carte ajoutée à votre liste de vente !');
