@@ -270,48 +270,31 @@ Contenu du fichier `docker/.env` :
 # ==================================================
 
 # === Base de données (PostgreSQL sur le VPS) ===
-# Utiliser l'IP de l'interface docker0 du VPS
-DATABASE_URL="postgresql://magicodex:VOTRE_MOT_DE_PASSE@172.17.0.1:5432/magicodex_prod?schema=public"
+# Utiliser l'IP de l'interface docker0 du VPS (172.17.0.1 sur Linux)
+DATABASE_URL=postgresql://magicodex:VOTRE_MOT_DE_PASSE@172.17.0.1:5432/magicodex_prod
 
-# === Redis (conteneur Docker) ===
-REDIS_URL="redis://redis:6379"
-
-# === JWT ===
-# Générer avec: openssl rand -base64 64
-JWT_SECRET="VOTRE_CLE_SECRETE_TRES_LONGUE_ET_ALEATOIRE"
-JWT_ACCESS_EXPIRATION=15m
-JWT_REFRESH_EXPIRATION=7d
-
-# === Cookies (sécurité des tokens) ===
-COOKIE_SECRET="AUTRE_CLE_SECRETE_POUR_COOKIES"
-COOKIE_SECURE=true
-COOKIE_SAME_SITE=strict
-
-# === Serveur ===
-PORT=3001
-NODE_ENV=production
+# === JWT (générer avec: openssl rand -base64 64) ===
+JWT_SECRET=VOTRE_CLE_SECRETE_TRES_LONGUE_ET_ALEATOIRE
+JWT_REFRESH_SECRET=AUTRE_CLE_SECRETE_POUR_REFRESH_TOKENS
 
 # === URLs ===
 FRONTEND_URL=https://magicodex.votre-domaine.com
 
-# === Rate Limiting ===
-RATE_LIMIT_WINDOW=60000
-RATE_LIMIT_MAX=100
-
-# === Monitoring ===
-ENABLE_METRICS=true
-LOG_LEVEL=info
+# === Scryfall API (optionnel) ===
+SCRYFALL_DELAY_MS=100
 ```
 
-**Important** : Générer les secrets :
+**Important** : Générer les secrets JWT :
 
 ```bash
-# JWT Secret
+# JWT Secret (access tokens)
 openssl rand -base64 64
 
-# Cookie Secret
-openssl rand -base64 32
+# JWT Refresh Secret (refresh tokens)
+openssl rand -base64 64
 ```
+
+> **Note** : Les variables `PORT`, `NODE_ENV` et `REDIS_URL` sont déjà définies dans le `docker-compose.yml`, inutile de les dupliquer dans `.env`.
 
 ### 5.3 Trouver l'IP de l'interface Docker
 
