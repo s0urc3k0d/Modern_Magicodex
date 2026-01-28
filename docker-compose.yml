@@ -1,0 +1,124 @@
+# =============================================================================
+# Magicodex - Docker Compose Production Stack
+# =============================================================================
+# Usage:
+#   docker-compose up -d              # Start all services
+#   docker-compose logs -f backend    # Follow backend logs
+#   docker-compose exec backend sh    # Shell into backend
+# =============================================================================
+# NOTE: PostgreSQL runs on the VPS host, not in Docker.
+#       Set DATABASE_URL in .env to point to your existing database.
+# =============================================================================
+
+version: '3.8'
+
+services:
+  # ===========================================================================
+  # Redis Cache
+  # ===========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: magicodex-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
+      --save 60 1000
+    volumes:
+      - redis_data:/data
+    networks:
+      - magicodex-internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 192M
+        reservations:
+          memory: 64M
+
+  # ===========================================================================
+  # Backend API (Node.js)
+  # ===========================================================================
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: magicodex-backend
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      # Database - Uses VPS PostgreSQL (not containerized)
+      # Use host.docker.internal on Docker Desktop, or 172.17.0.1 on Linux
+      DATABASE_URL: ${DATABASE_URL:?Database URL required}
+      # Redis
+      REDIS_URL: redis://redis:6379
+      # Auth
+      JWT_SECRET: ${JWT_SECRET:?JWT secret required}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT refresh secret required}
+      # Frontend URL for CORS
+      FRONTEND_URL: ${FRONTEND_URL:-https://magicodex.example.com}
+      # Scryfall sync
+      SCRYFALL_DELAY_MS: ${SCRYFALL_DELAY_MS:-100}
+    volumes:
+      # Persist logs if needed
+      - backend_logs:/app/logs
+    networks:
+      - magicodex-internal
+      - magicodex-external
+    ports:
+      # Expose to host for nginx reverse proxy
+      - "127.0.0.1:3001:3001"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Access VPS PostgreSQL
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  # ===========================================================================
+  # Database Migrations (run once)
+  # ===========================================================================
+  migrations:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: magicodex-migrations
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Database URL required}
+    command: npx prisma migrate deploy
+    networks:
+      - magicodex-external  # Needs access to VPS host network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Access VPS PostgreSQL
+    restart: "no"
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  magicodex-internal:
+    driver: bridge
+    internal: true  # No external access
+  magicodex-external:
+    driver: bridge
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  redis_data:
+    driver: local
+  backend_logs:
+    driver: local

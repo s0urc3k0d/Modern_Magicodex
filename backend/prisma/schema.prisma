@@ -1,0 +1,226 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ListType {
+  WISHLIST
+  TRADE
+}
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  password        String
+  username        String    @unique
+  firstName       String?
+  lastName        String?
+  isAdmin         Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  userCards       UserCard[]
+  decks          Deck[]
+  listItems      UserListItem[]
+  refreshTokens  RefreshToken[]
+  
+  @@map("users")
+}
+
+model Set {
+  id              String    @id @default(cuid())
+  scryfallId      String    @unique
+  code            String    @unique
+  name            String
+  nameFr          String?
+  type            String
+  releasedAt      DateTime?
+  cardCount       Int?
+  iconSvgUri      String?
+  searchUri       String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  cards          Card[]
+  
+  @@map("sets")
+}
+
+model Card {
+  id              String    @id @default(cuid())
+  scryfallId      String    @unique
+  oracleId        String?
+  name            String
+  nameFr          String?
+  manaCost        String?
+  cmc             Float?
+  typeLine        String
+  typeLineFr      String?
+  oracleText      String?
+  oracleTextFr    String?
+  power           String?
+  toughness       String?
+  loyalty         String?
+  colors          String?   // JSON string pour les couleurs ["W","U","B","R","G"]
+  colorIdentity   String?   // JSON string pour l'identité couleur
+  rarity          String
+  collectorNumber String
+  lang            String    @default("en")
+  imageUris       String?   // JSON string
+  prices          String?   // JSON string
+  // Numeric EUR price for sorting/filtering (backfilled from prices JSON)
+  priceEur        Float?
+  // Numeric EUR foil price (optional, backfilled from prices JSON)
+  priceEurFoil    Float?
+  legalities      String?   // JSON string
+  // Scryfall flags for variants/extras
+  booster         Boolean?
+  promo           Boolean?
+  variation       Boolean?
+  fullArt         Boolean?
+  frameEffects    String?   // JSON string string[]
+  promoTypes      String?   // JSON string string[]
+  borderColor     String?
+  isExtra         Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  setId          String
+  set            Set       @relation(fields: [setId], references: [id])
+  userCards      UserCard[]
+  deckCards      DeckCard[]
+  listItems      UserListItem[]
+  
+  // Allow multiple prints/variations with same collector number in a set
+  // Previously unique, now indexed only
+  @@index([setId, collectorNumber])
+  @@index([oracleId])
+  @@index([setId])
+  @@index([priceEur])
+  @@index([priceEurFoil])
+  @@map("cards")
+}
+
+model UserCard {
+  id              String    @id @default(cuid())
+  quantity        Int       @default(1)
+  quantityFoil    Int       @default(0)
+  condition       String    @default("NM") // NM, LP, MP, HP, DMG
+  language        String    @default("en")
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cardId         String
+  card           Card      @relation(fields: [cardId], references: [id])
+  
+  @@unique([userId, cardId])
+  @@index([userId])
+  @@index([cardId])
+  @@map("user_cards")
+}
+
+model Deck {
+  id              String    @id @default(cuid())
+  name            String
+  description     String?
+  format          String    // Standard, Commander, Modern, Legacy, Vintage, etc.
+  archetype       String?   // Aggro, Control, Midrange, Combo, etc.
+  colors          String?   // JSON string pour les couleurs ["W","U","B","R","G"]
+  isPublic        Boolean   @default(false)
+  mainboardCount  Int       @default(0)
+  sideboardCount  Int       @default(0)
+  // Cached validation metadata (updated via validate endpoint)
+  lastValidationAt     DateTime?
+  lastValidationValid  Boolean?
+  lastValidationIssues Json?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deckCards      DeckCard[]
+  
+  @@map("decks")
+}
+
+model DeckCard {
+  id              String    @id @default(cuid())
+  quantity        Int       @default(1)
+  board           String    @default("main") // main, side, maybe
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  deckId         String
+  deck           Deck      @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  cardId         String
+  card           Card      @relation(fields: [cardId], references: [id])
+  
+  @@unique([deckId, cardId, board])
+  @@index([deckId])
+  @@index([cardId])
+  @@map("deck_cards")
+}
+
+model UserListItem {
+  id          String   @id @default(cuid())
+  type        ListType
+  quantity    Int      @default(1)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cardId      String
+  card        Card     @relation(fields: [cardId], references: [id])
+
+  @@unique([userId, cardId, type])
+  @@index([userId])
+  @@index([cardId])
+  @@index([type])
+  @@map("user_list_items")
+}
+
+model ScryfallSync {
+  id              String    @id @default(cuid())
+  type            String    // sets, cards
+  lastSync        DateTime
+  status          String    // success, error, running
+  message         String?
+  recordsProcessed Int      @default(0)
+  createdAt       DateTime  @default(now())
+  
+  @@map("scryfall_syncs")
+}
+
+model RefreshToken {
+  id              String    @id @default(cuid())
+  token           String    @unique
+  expiresAt       DateTime
+  createdAt       DateTime  @default(now())
+  
+  // Relations
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}

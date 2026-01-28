@@ -1,0 +1,61 @@
+/* Fonts MTG */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Configuration de base pour test */
+@layer base {
+  body {
+    background-color: #1a1a1a;
+    color: white;
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+@layer utilities {
+  /* Couleurs MTG de base */
+  .bg-mtg-background { background-color: #1a1a1a; }
+  .bg-mtg-surface { background-color: #2a2a2a; }
+  .bg-mtg-primary { background-color: #E49B0F; }
+  .bg-mtg-secondary { background-color: #D3202A; }
+  .bg-mtg-accent { background-color: #0E68AB; }
+  .bg-mtg-black { background-color: #150B00; }
+  
+  .text-mtg-primary { color: #E49B0F; }
+  .text-mtg-secondary { color: #D3202A; }
+  .text-mtg-accent { color: #0E68AB; }
+  .text-mtg-green { color: #00733E; }
+  
+  .border-mtg-primary { border-color: #E49B0F; }
+}
+
+@layer components {
+  .card {
+    @apply bg-gray-800 rounded-lg border border-gray-700 shadow-lg p-6;
+  }
+  
+  .btn-primary {
+    @apply px-4 py-2 font-semibold rounded-lg transition-colors duration-200;
+    background-color: #E49B0F;
+    color: #150B00;
+  }
+  
+  .btn-primary:hover {
+    background-color: #d4940e;
+  }
+  
+  .btn-outline {
+    @apply px-4 py-2 border-2 border-gray-600 text-gray-300 font-semibold rounded-lg hover:border-gray-500 hover:text-white transition-all duration-200;
+  }
+  
+  .input {
+    @apply w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none;
+  }
+  
+  .input:focus {
+    border-color: #E49B0F;
+    box-shadow: 0 0 0 3px rgba(228, 155, 15, 0.1);
+  }
+}

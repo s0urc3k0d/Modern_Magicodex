@@ -1,0 +1,39 @@
+# =============================================================================
+# Magicodex Frontend - Multi-stage Dockerfile
+# =============================================================================
+
+# Stage 1: Build
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Install dependencies
+COPY frontend/package*.json ./
+RUN npm ci
+
+# Copy source and build
+COPY frontend/ ./
+
+# Build with production API URL (will be proxied by nginx)
+ARG VITE_API_URL=/api
+ENV VITE_API_URL=$VITE_API_URL
+
+RUN npm run build
+
+# Stage 2: Production (nginx pour servir les fichiers statiques)
+# Note: Si tu veux centraliser nginx sur le VPS, utilise seulement le stage builder
+# et copie le dossier dist vers ton nginx centralisé
+FROM nginx:alpine AS production
+
+# Copy built assets
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copy nginx config for SPA routing
+COPY docker/nginx-frontend.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:80/ || exit 1
+
+CMD ["nginx", "-g", "daemon off;"]

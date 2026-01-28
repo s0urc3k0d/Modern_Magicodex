@@ -1,0 +1,183 @@
+/* Fonts MTG */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Polices personnalisées Magic */
+@font-face {
+  font-family: 'Beleren';
+  src: url('https://cdn.jsdelivr.net/gh/andrewgioia/mana@main/fonts/beleren/beleren-small-caps.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* Styles de base MTG */
+@layer base {
+  * {
+    @apply border-gray-700;
+  }
+  
+  html {
+    @apply scroll-smooth;
+  }
+  
+  body {
+    @apply bg-mtg-background text-white font-body antialiased;
+  }
+}
+
+/* Composants personnalisés MTG */
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-mtg-background;
+  }
+  
+  .btn-primary {
+    @apply btn bg-mtg-primary text-mtg-black hover:bg-opacity-90 focus:ring-mtg-primary;
+  }
+  
+  .btn-secondary {
+    @apply btn bg-mtg-secondary text-white hover:bg-opacity-90 focus:ring-mtg-secondary;
+  }
+  
+  .btn-outline {
+    @apply btn border border-mtg-primary text-mtg-primary hover:bg-mtg-primary hover:text-mtg-black focus:ring-mtg-primary;
+  }
+  
+  .card {
+    @apply bg-mtg-surface rounded-xl border border-gray-700 shadow-lg;
+  }
+  
+  .card-hover {
+    @apply card transition-all duration-300 hover:shadow-xl hover:shadow-mtg-primary/20 hover:-translate-y-1;
+  }
+  
+  .input {
+    @apply bg-mtg-surface border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-mtg-primary focus:border-transparent;
+  }
+  
+  .mana-symbol {
+    @apply inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold;
+  }
+  
+  .mana-colorless {
+    @apply mana-symbol bg-gray-100 text-gray-800 border-2 border-gray-300;
+  }
+  
+  .mana-blue {
+    @apply mana-symbol bg-blue-500 text-white;
+  }
+  
+  .mana-black {
+    @apply mana-symbol bg-gray-900 text-white;
+  }
+  
+  .mana-red {
+    @apply mana-symbol bg-red-500 text-white;
+  }
+  
+  .mana-green {
+    @apply mana-symbol bg-green-600 text-white;
+  }
+  
+  .mana-white {
+    @apply mana-symbol bg-gray-400 text-gray-900;
+  }
+  
+  .spinner {
+    @apply animate-spin rounded-full border-2 border-gray-300 border-t-mtg-primary;
+  }
+  
+  .gradient-text {
+    @apply bg-gradient-to-r from-mtg-primary to-mtg-secondary bg-clip-text text-transparent;
+  }
+  
+  .glass-effect {
+    @apply backdrop-blur-sm bg-white/10 border border-white/20;
+  }
+}
+
+/* Utilitaires personnalisés MTG */
+@layer utilities {
+  .text-shadow {
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+  }
+  
+  .glow {
+    box-shadow: 0 0 20px rgba(228, 155, 15, 0.3);
+  }
+  
+  .glow-hover:hover {
+    box-shadow: 0 0 30px rgba(228, 155, 15, 0.5);
+  }
+}
+
+/* Animations personnalisées */
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(228, 155, 15, 0.4),
+    transparent
+  );
+  background-size: 200px 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* Styles pour les cartes Magic */
+.mtg-card {
+  @apply rounded-lg overflow-hidden border-2 border-gray-600 transition-all duration-300;
+  aspect-ratio: 63/88;
+}
+
+.mtg-card:hover {
+  @apply border-mtg-primary shadow-lg shadow-mtg-primary/30 transform scale-105;
+}
+
+/* Styles pour les coûts de mana */
+.mana-cost {
+  @apply flex items-center space-x-1;
+}
+
+.mana-cost .mana-symbol {
+  @apply w-4 h-4 text-xs;
+}
+
+/* Styles pour la rareté des cartes */
+.rarity-common {
+  @apply border-gray-400;
+}
+
+.rarity-uncommon {
+  @apply border-gray-300;
+}
+
+.rarity-rare {
+  @apply border-yellow-400;
+}
+
+.rarity-mythic {
+  @apply border-orange-500;
+}
+
+/* Responsive design amélioré */
+@media (max-width: 640px) {
+  .card {
+    @apply rounded-lg;
+  }
+  
+  .btn {
+    @apply text-sm px-3 py-1.5;
+  }
+}

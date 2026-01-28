@@ -1,0 +1,80 @@
+# =============================================================================
+# Magicodex - Docker Compose Development Stack
+# =============================================================================
+# Usage:
+#   docker-compose -f docker-compose.dev.yml up -d
+# =============================================================================
+
+version: '3.8'
+
+services:
+  # ===========================================================================
+  # PostgreSQL Database (Dev)
+  # ===========================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: magicodex-db-dev
+    environment:
+      POSTGRES_USER: magicodex
+      POSTGRES_PASSWORD: devpassword
+      POSTGRES_DB: magicodex_dev
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - magicodex-dev
+
+  # ===========================================================================
+  # Redis Cache (Dev)
+  # ===========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: magicodex-redis-dev
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data_dev:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - magicodex-dev
+
+  # ===========================================================================
+  # pgAdmin (optional - for database management)
+  # ===========================================================================
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: magicodex-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@magicodex.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - magicodex-dev
+
+  # ===========================================================================
+  # Redis Commander (optional - for Redis management)
+  # ===========================================================================
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: magicodex-redis-ui
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - magicodex-dev
+
+networks:
+  magicodex-dev:
+    driver: bridge
+
+volumes:
+  postgres_data_dev:
+  redis_data_dev:
