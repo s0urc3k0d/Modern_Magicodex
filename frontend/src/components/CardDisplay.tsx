@@ -124,7 +124,7 @@ const CardDisplay = ({
           
           {/* Badge de quantité possédée */}
           {isOwned && (
-            <div className="absolute top-2 right-2 bg-mtg-gold text-black px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+            <div className="absolute top-2 right-2 z-20 bg-mtg-gold text-black px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1">
               {userCard?.quantityFoil > 0 && <Sparkles className="h-3 w-3" />}
               {totalQuantity}
             </div>
@@ -132,14 +132,14 @@ const CardDisplay = ({
 
           {/* Badge "En vente" */}
           {forSaleQuantity && (forSaleQuantity.quantity > 0 || forSaleQuantity.quantityFoil > 0) && (
-            <div className="absolute top-10 right-2 bg-green-600 text-white px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1">
+            <div className="absolute top-10 right-2 z-20 bg-green-600 text-white px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1">
               <ShoppingCart className="h-3 w-3" />
               {forSaleQuantity.quantity + forSaleQuantity.quantityFoil}
             </div>
           )}
           
           {/* Badge de rareté */}
-          <div className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-bold ${
+          <div className={`absolute top-2 left-2 z-20 px-2 py-1 rounded text-xs font-bold ${
             card.rarity === 'mythic' ? 'bg-orange-500 text-white' :
             card.rarity === 'rare' ? 'bg-yellow-500 text-black' :
             card.rarity === 'uncommon' ? 'bg-gray-400 text-black' :
