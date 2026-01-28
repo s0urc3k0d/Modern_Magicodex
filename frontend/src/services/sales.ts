@@ -115,6 +115,14 @@ export const LANGUAGES = [
 
 class SalesService {
   /**
+   * Récupérer les quantités en vente par carte (pour affichage dans collection)
+   */
+  async getSalesByCards(): Promise<Record<string, { quantity: number; quantityFoil: number }>> {
+    const response = await api.get('/sales/by-cards');
+    return response.data;
+  }
+
+  /**
    * Récupérer la liste des cartes à vendre
    */
   async getSales(): Promise<{ items: SaleItem[]; stats: { totalItems: number; totalCards: number; totalValue: number } }> {

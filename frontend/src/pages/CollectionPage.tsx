@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Search, Plus, Grid, List, Package, Layers, Download } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { collectionService } from '../services/collection';
 import { salesService } from '../services/sales';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AddCardModal from '../components/AddCardModal';
 import BulkAddBySetModal from '../components/BulkAddBySetModal';
+import AddToSaleModal from '../components/AddToSaleModal';
 import CardGrid from '../components/CardGrid';
 import CollectionBySet from '../components/CollectionBySet';
 import toast from 'react-hot-toast';
+import type { Card, UserCard } from '../types';
 
 const CollectionPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -18,6 +20,7 @@ const CollectionPage = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showBulkSetModal, setShowBulkSetModal] = useState(false);
+  const [saleModalData, setSaleModalData] = useState<{ card: Card; userCard: UserCard } | null>(null);
   // Advanced filters
   const [rarity, setRarity] = useState('');
   const [colors, setColors] = useState<string[]>([]);
@@ -62,6 +65,12 @@ const CollectionPage = () => {
       return collectionService.getCollection(page, limit, searchQuery, serverFilters);
     },
     placeholderData: (prev) => prev as any,
+  });
+
+  // Récupération des cartes en vente (pour afficher les badges)
+  const { data: forSaleData } = useQuery({
+    queryKey: ['sales-by-cards'],
+    queryFn: () => salesService.getSalesByCards(),
   });
 
   // URL sync for filters
@@ -170,22 +179,54 @@ const CollectionPage = () => {
 
   // Mutation pour ajouter une carte à la liste de vente
   const addToSaleMutation = useMutation({
-    mutationFn: (cardId: string) => salesService.addToSale({
-      cardId,
-      condition: 'NM',
-      language: 'fr',
+    mutationFn: (data: {
+      cardId: string;
+      quantity: number;
+      quantityFoil: number;
+      condition: string;
+      language: string;
+      askingPrice?: number;
+      askingPriceFoil?: number;
+    }) => salesService.addToSale({
+      cardId: data.cardId,
+      quantity: data.quantity,
+      quantityFoil: data.quantityFoil,
+      condition: data.condition,
+      language: data.language,
+      askingPrice: data.askingPrice,
+      askingPriceFoil: data.askingPriceFoil,
     }),
     onSuccess: () => {
       toast.success('Carte ajoutée à votre liste de vente !');
       queryClient.invalidateQueries({ queryKey: ['sales'] });
+      queryClient.invalidateQueries({ queryKey: ['sales-by-cards'] });
     },
     onError: () => {
       toast.error('Erreur lors de l\'ajout à la vente');
     },
   });
 
+  // Ouvrir la modal de mise en vente
   const handleAddToSale = (cardId: string) => {
-    addToSaleMutation.mutate(cardId);
+    const userCard = collectionData?.userCards?.find((uc: any) => uc.cardId === cardId);
+    if (!userCard) {
+      toast.error('Carte non trouvée dans votre collection');
+      return;
+    }
+    setSaleModalData({ card: userCard.card, userCard });
+  };
+
+  // Confirmer la mise en vente depuis la modal
+  const handleConfirmSale = (data: {
+    cardId: string;
+    quantity: number;
+    quantityFoil: number;
+    condition: string;
+    language: string;
+    askingPrice?: number;
+    askingPriceFoil?: number;
+  }) => {
+    addToSaleMutation.mutate(data);
   };
 
   const isLoading = statsLoading || collectionLoading;
@@ -500,10 +541,12 @@ const CollectionPage = () => {
             onUpdateQuantity={handleUpdateQuantity}
             onAddToSale={handleAddToSale}
             searchQuery={searchQuery}
+            forSaleData={forSaleData || {}}
           />
         ) : (
           <CardGrid
     userCards={filteredUserCards}
+            forSaleData={forSaleData || {}}
             viewMode={viewMode}
             showFilters={showFilters}
             onAddToCollection={handleAddToCollection}
@@ -544,6 +587,19 @@ const CollectionPage = () => {
         isOpen={showBulkSetModal}
         onClose={() => setShowBulkSetModal(false)}
       />
+
+      {/* Modal de mise en vente */}
+      <AnimatePresence>
+        {saleModalData && (
+          <AddToSaleModal
+            card={saleModalData.card}
+            userCard={saleModalData.userCard}
+            forSaleQuantity={forSaleData?.[saleModalData.card.id]}
+            onClose={() => setSaleModalData(null)}
+            onConfirm={handleConfirmSale}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

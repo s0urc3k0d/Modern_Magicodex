@@ -13,6 +13,7 @@ import toast from 'react-hot-toast';
 interface CardGridProps {
   cards?: Card[];
   userCards?: UserCard[];
+  forSaleData?: Record<string, { quantity: number; quantityFoil: number }>;
   loading?: boolean;
   viewMode?: 'grid' | 'list';
   showFilters?: boolean;
@@ -26,6 +27,7 @@ interface CardGridProps {
 const CardGrid = ({
   cards = [],
   userCards = [],
+  forSaleData = {},
   loading = false,
   viewMode = 'grid',
   showFilters = false,
@@ -391,6 +393,7 @@ const CardGrid = ({
                 key={card.id}
                 card={card}
                 userCard={userCardMap.get(card.id)}
+                forSaleQuantity={forSaleData[card.id]}
                 viewMode={viewMode}
                 onAddToCollection={onAddToCollection}
                 onUpdateQuantity={onUpdateQuantity}

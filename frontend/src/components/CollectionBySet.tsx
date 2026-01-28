@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 
 interface CollectionBySetProps {
   userCards: UserCard[];
+  forSaleData?: Record<string, { quantity: number; quantityFoil: number }>;
   viewMode?: 'grid' | 'list';
   onUpdateQuantity?: (cardId: string, newQuantity: number, newQuantityFoil: number) => void;
   onAddToSale?: (cardId: string) => void;
@@ -31,6 +32,7 @@ interface SetGroup {
 interface SetGroupSectionProps {
   group: SetGroup;
   viewMode: 'grid' | 'list';
+  forSaleData: Record<string, { quantity: number; quantityFoil: number }>;
   isStdExpanded: boolean;
   isXExpanded: boolean;
   toggleKey: (key: string) => void;
@@ -40,7 +42,7 @@ interface SetGroupSectionProps {
   handleToggleListItem: (cardId: string, type: any) => Promise<null>;
 }
 
-const SetGroupSection = ({ group, viewMode, isStdExpanded, isXExpanded, toggleKey, sortUserCards, onUpdateQuantity, onAddToSale, handleToggleListItem }: SetGroupSectionProps) => {
+const SetGroupSection = ({ group, viewMode, forSaleData, isStdExpanded, isXExpanded, toggleKey, sortUserCards, onUpdateQuantity, onAddToSale, handleToggleListItem }: SetGroupSectionProps) => {
   // Separate queries per group; only run when expanded
   const { data: standardPage, isLoading: standardLoading } = useQuery({
     queryKey: ['set-standard-count', group.set.id],
@@ -133,6 +135,7 @@ const SetGroupSection = ({ group, viewMode, isStdExpanded, isXExpanded, toggleKe
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                   {sortUserCards(standardCards).map((uc: any) => (
                     <CardDisplay key={uc.id} card={uc.card} userCard={uc}
+                      forSaleQuantity={forSaleData[uc.cardId]}
                       onUpdateQuantity={onUpdateQuantity}
                       onAddToSale={onAddToSale}
                       onToggleListItem={handleToggleListItem}
@@ -144,6 +147,7 @@ const SetGroupSection = ({ group, viewMode, isStdExpanded, isXExpanded, toggleKe
                 <div className="space-y-2">
                   {sortUserCards(standardCards).map((uc: any) => (
                     <CardDisplay key={uc.id} card={uc.card} userCard={uc}
+                      forSaleQuantity={forSaleData[uc.cardId]}
                       onUpdateQuantity={onUpdateQuantity}
                       onAddToSale={onAddToSale}
                       onToggleListItem={handleToggleListItem}
@@ -208,6 +212,7 @@ const SetGroupSection = ({ group, viewMode, isStdExpanded, isXExpanded, toggleKe
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                   {sortUserCards(extraCards).map((uc: any) => (
                     <CardDisplay key={uc.id} card={uc.card} userCard={uc}
+                      forSaleQuantity={forSaleData[uc.cardId]}
                       onUpdateQuantity={onUpdateQuantity}
                       onAddToSale={onAddToSale}
                       onToggleListItem={handleToggleListItem}
@@ -219,6 +224,7 @@ const SetGroupSection = ({ group, viewMode, isStdExpanded, isXExpanded, toggleKe
                 <div className="space-y-2">
                   {sortUserCards(extraCards).map((uc: any) => (
                     <CardDisplay key={uc.id} card={uc.card} userCard={uc}
+                      forSaleQuantity={forSaleData[uc.cardId]}
                       onUpdateQuantity={onUpdateQuantity}
                       onAddToSale={onAddToSale}
                       onToggleListItem={handleToggleListItem}
@@ -238,6 +244,7 @@ const SetGroupSection = ({ group, viewMode, isStdExpanded, isXExpanded, toggleKe
 
 const CollectionBySet = ({
   userCards,
+  forSaleData = {},
   viewMode = 'grid',
   onUpdateQuantity,
   onAddToSale,
@@ -380,6 +387,7 @@ const CollectionBySet = ({
             key={group.set.id}
             group={group}
             viewMode={viewMode}
+            forSaleData={forSaleData}
             isStdExpanded={expanded.has(stdKey)}
             isXExpanded={expanded.has(xKey)}
             toggleKey={toggleKey}

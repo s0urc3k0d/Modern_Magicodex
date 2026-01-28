@@ -73,6 +73,52 @@ const bulkAddToSaleSchema = z.object({
 
 /**
  * @swagger
+ * /sales/by-cards:
+ *   get:
+ *     summary: Récupérer les quantités en vente par carte (pour affichage dans collection)
+ *     tags: [Sales]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.get('/by-cards', async (req: AuthenticatedRequest, res) => {
+  try {
+    const userId = req.user!.id;
+
+    // Récupérer tous les items de vente groupés par cardId
+    const saleItems = await prisma.userListItem.findMany({
+      where: {
+        userId,
+        type: 'FORSALE',
+      },
+      select: {
+        cardId: true,
+        quantity: true,
+        isFoil: true,
+      },
+    });
+
+    // Agréger par cardId : { cardId: { quantity: x, quantityFoil: y } }
+    const byCard: Record<string, { quantity: number; quantityFoil: number }> = {};
+    for (const item of saleItems) {
+      if (!byCard[item.cardId]) {
+        byCard[item.cardId] = { quantity: 0, quantityFoil: 0 };
+      }
+      if (item.isFoil) {
+        byCard[item.cardId].quantityFoil += item.quantity;
+      } else {
+        byCard[item.cardId].quantity += item.quantity;
+      }
+    }
+
+    res.json(byCard);
+  } catch (error) {
+    console.error('Get sales by cards error:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération' });
+  }
+});
+
+/**
+ * @swagger
  * /sales:
  *   get:
  *     summary: Récupérer la liste des cartes à vendre

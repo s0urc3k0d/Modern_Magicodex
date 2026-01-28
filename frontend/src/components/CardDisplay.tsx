@@ -8,6 +8,7 @@ import { normalizeCardBasics, pickCardImageUrl, getCardPriceEUR } from '../domai
 interface CardDisplayProps {
   card: Card;
   userCard?: UserCard | null;
+  forSaleQuantity?: { quantity: number; quantityFoil: number } | null;
   onAddToCollection?: (cardId: string, quantity: number, foil?: boolean) => void;
   onUpdateQuantity?: (cardId: string, newQuantity: number, newQuantityFoil: number) => void;
   onToggleListItem?: (cardId: string, type: ListType) => Promise<UserListItem | null> | void;
@@ -19,6 +20,7 @@ interface CardDisplayProps {
 const CardDisplay = ({
   card,
   userCard,
+  forSaleQuantity,
   onAddToCollection,
   onUpdateQuantity,
   onToggleListItem,
@@ -125,6 +127,14 @@ const CardDisplay = ({
             <div className="absolute top-2 right-2 bg-mtg-gold text-black px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1">
               {userCard?.quantityFoil > 0 && <Sparkles className="h-3 w-3" />}
               {totalQuantity}
+            </div>
+          )}
+
+          {/* Badge "En vente" */}
+          {forSaleQuantity && (forSaleQuantity.quantity > 0 || forSaleQuantity.quantityFoil > 0) && (
+            <div className="absolute top-10 right-2 bg-green-600 text-white px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1">
+              <ShoppingCart className="h-3 w-3" />
+              {forSaleQuantity.quantity + forSaleQuantity.quantityFoil}
             </div>
           )}
           
