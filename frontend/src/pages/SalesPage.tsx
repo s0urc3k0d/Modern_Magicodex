@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ShoppingCart, Download, Trash2, Edit, 
   Package, Euro, AlertCircle, Search,
-  ChevronDown, ChevronUp, Filter, X
+  ChevronDown, ChevronUp, Filter, X, RefreshCw
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -53,7 +53,7 @@ const EditSaleModal = ({
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-mtg-secondary rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto"
+        className="bg-mtg-surface rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto border border-gray-700"
       >
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
@@ -173,15 +173,39 @@ const EditSaleModal = ({
               <label className="block text-sm font-medium text-gray-300 mb-1">
                 Prix demandé (€)
               </label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={askingPrice}
-                onChange={(e) => setAskingPrice(e.target.value)}
-                placeholder="Ex: 1.50"
-                className="input w-full"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={askingPrice}
+                  onChange={(e) => setAskingPrice(e.target.value)}
+                  placeholder="Ex: 1.50"
+                  className="input flex-1"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const marketPrice = item.isFoil 
+                      ? (item.card.priceEurFoil || item.card.priceEur)
+                      : item.card.priceEur;
+                    if (marketPrice) {
+                      setAskingPrice(marketPrice.toFixed(2));
+                    }
+                  }}
+                  disabled={!item.card.priceEur && !item.card.priceEurFoil}
+                  className="btn-outline px-3 flex items-center gap-1 whitespace-nowrap"
+                  title="Utiliser le prix du marché"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Sync marché
+                </button>
+              </div>
+              {(item.isFoil ? item.card.priceEurFoil : item.card.priceEur) && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Prix marché {item.isFoil ? 'foil' : ''}: {(item.isFoil ? (item.card.priceEurFoil || item.card.priceEur) : item.card.priceEur)?.toFixed(2)}€
+                </p>
+              )}
             </div>
 
             {/* Notes */}
@@ -232,7 +256,7 @@ const SaleCard = ({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
-      className="bg-mtg-secondary rounded-lg overflow-hidden border border-gray-700 hover:border-mtg-primary transition-colors"
+      className="bg-mtg-surface rounded-lg overflow-hidden border border-gray-700 hover:border-mtg-primary transition-colors"
     >
       <div className="flex">
         {/* Image */}
@@ -490,7 +514,7 @@ const SalesPage = () => {
           {/* Toggle filtres */}
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="btn-secondary flex items-center gap-2"
+            className="btn-outline flex items-center gap-2"
           >
             <Filter className="w-5 h-5" />
             Filtres
