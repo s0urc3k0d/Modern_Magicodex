@@ -53,7 +53,8 @@ const AddCardModal = ({ isOpen, onClose }: AddCardModalProps) => {
       const items = cards.map(c => ({
         cardId: c.cardId,
         quantity: c.isFoil ? 0 : c.quantity, // normal quantity
-        quantityFoil: c.isFoil ? c.quantity : 0
+        quantityFoil: c.isFoil ? c.quantity : 0,
+        language: 'fr'
       }));
       return collectionService.addCardsBulk(items, 'increment');
     },

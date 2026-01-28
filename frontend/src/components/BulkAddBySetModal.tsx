@@ -92,7 +92,8 @@ const BulkAddBySetModal = ({ isOpen, onClose }: Props) => {
     const bulkItems = entries.map(([cardId, cfg]) => ({
       cardId,
       quantity: cfg.foil ? 0 : cfg.qty,
-      quantityFoil: cfg.foil ? cfg.qty : 0
+      quantityFoil: cfg.foil ? cfg.qty : 0,
+      language: 'fr'
     }));
     const CHUNK = 300;
     const totalChunks = Math.ceil(bulkItems.length / CHUNK);
