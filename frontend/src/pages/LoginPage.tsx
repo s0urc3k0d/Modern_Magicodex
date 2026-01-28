@@ -69,6 +69,7 @@ const LoginPage = () => {
                 {...register('email')}
                 type="email"
                 id="email"
+                autoComplete="email"
                 className="input w-full"
                 placeholder="votre@email.com"
               />
@@ -86,6 +87,7 @@ const LoginPage = () => {
                   {...register('password')}
                   type={showPassword ? 'text' : 'password'}
                   id="password"
+                  autoComplete="current-password"
                   className="input w-full pr-10"
                   placeholder="••••••••"
                 />

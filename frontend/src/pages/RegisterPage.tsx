@@ -79,6 +79,7 @@ const RegisterPage = () => {
                   {...register('firstName')}
                   type="text"
                   id="firstName"
+                  autoComplete="given-name"
                   className="input w-full"
                   placeholder="John"
                 />
@@ -91,6 +92,7 @@ const RegisterPage = () => {
                   {...register('lastName')}
                   type="text"
                   id="lastName"
+                  autoComplete="family-name"
                   className="input w-full"
                   placeholder="Doe"
                 />
@@ -105,6 +107,7 @@ const RegisterPage = () => {
                 {...register('email')}
                 type="email"
                 id="email"
+                autoComplete="email"
                 className="input w-full"
                 placeholder="votre@email.com"
               />
@@ -121,6 +124,7 @@ const RegisterPage = () => {
                 {...register('username')}
                 type="text"
                 id="username"
+                autoComplete="username"
                 className="input w-full"
                 placeholder="johndoe"
               />
@@ -138,6 +142,7 @@ const RegisterPage = () => {
                   {...register('password')}
                   type={showPassword ? 'text' : 'password'}
                   id="password"
+                  autoComplete="new-password"
                   className="input w-full pr-10"
                   placeholder="••••••••"
                 />
@@ -163,6 +168,7 @@ const RegisterPage = () => {
                   {...register('confirmPassword')}
                   type={showConfirmPassword ? 'text' : 'password'}
                   id="confirmPassword"
+                  autoComplete="new-password"
                   className="input w-full pr-10"
                   placeholder="••••••••"
                 />
