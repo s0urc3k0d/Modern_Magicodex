@@ -1,5 +1,6 @@
 import { prisma } from '../db/prisma';
 import { ScryfallHttpClient } from './scryfall-http';
+import { computeIsExtra } from '../utils/extras';
 
 type ScryCard = {
   id: string;
@@ -31,6 +32,14 @@ type ScryCard = {
     type_line?: string;
     image_uris?: any;
   }>;
+  // Fields for isExtra calculation
+  booster?: boolean;
+  promo?: boolean;
+  variation?: boolean;
+  full_art?: boolean;
+  frame_effects?: string[];
+  promo_types?: string[];
+  border_color?: string;
 };
 
 type ScrySet = {
@@ -191,6 +200,7 @@ export class HybridScryfallService {
         colorIdentity: colorId,
         rarity: en.rarity ?? 'common',
         collectorNumber: en.collector_number ?? '',
+        isExtra: computeIsExtra(en),
   // Base row in EN, with FR overlays where available
   lang: 'en',
         imageUris: JSON.stringify(imageUris),
