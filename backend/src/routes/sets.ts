@@ -200,7 +200,7 @@ router.get('/:setId/cards', async (req, res) => {
       : '';
     
     const [cards, countResult] = await Promise.all([
-      prisma.$queryRawUnsafe<any[]>(`
+      prisma.$queryRawUnsafe(`
         SELECT c.*, 
                row_to_json(s.*) as set
         FROM cards c
@@ -210,10 +210,10 @@ router.get('/:setId/cards', async (req, res) => {
           CAST(NULLIF(regexp_replace("collectorNumber", '[^0-9].*', '', 'g'), '') AS INTEGER) ASC NULLS LAST,
           "collectorNumber" ASC
         LIMIT $2 OFFSET $3
-      `, setId, limit, offset),
-      prisma.$queryRawUnsafe<{ count: bigint }[]>(`
+      `, setId, limit, offset) as Promise<any[]>,
+      prisma.$queryRawUnsafe(`
         SELECT COUNT(*) as count FROM cards WHERE "setId" = $1 ${extrasCondition}
-      `, setId)
+      `, setId) as Promise<{ count: bigint }[]>
     ]);
 
     const total = Number(countResult[0]?.count || 0);

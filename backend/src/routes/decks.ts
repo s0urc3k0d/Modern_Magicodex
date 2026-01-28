@@ -70,7 +70,7 @@ router.post('/', async (req: AuthenticatedRequest, res) => {
  */
 router.get('/:deckId', async (req: AuthenticatedRequest, res) => {
   try {
-    const { deckId } = req.params;
+    const deckId = req.params.deckId as string;
     const userId = req.user!.id;
 
     const deck = await deckService.getDeckById(deckId, userId);
@@ -94,7 +94,7 @@ router.get('/:deckId', async (req: AuthenticatedRequest, res) => {
  */
 router.put('/:deckId', async (req: AuthenticatedRequest, res) => {
   try {
-    const { deckId } = req.params;
+    const deckId = req.params.deckId as string;
     const userId = req.user!.id;
 
     const deck = await deckService.updateDeck(deckId, userId, req.body);
@@ -121,7 +121,7 @@ router.put('/:deckId', async (req: AuthenticatedRequest, res) => {
  */
 router.delete('/:deckId', async (req: AuthenticatedRequest, res) => {
   try {
-    const { deckId } = req.params;
+    const deckId = req.params.deckId as string;
     const userId = req.user!.id;
 
     await deckService.deleteDeck(deckId, userId);
@@ -142,7 +142,7 @@ router.delete('/:deckId', async (req: AuthenticatedRequest, res) => {
  */
 router.post('/:deckId/duplicate', async (req: AuthenticatedRequest, res) => {
   try {
-    const { deckId } = req.params;
+    const deckId = req.params.deckId as string;
     const userId = req.user!.id;
 
     const duplicated = await deckService.duplicateDeck(deckId, userId);
@@ -165,7 +165,7 @@ router.post('/:deckId/duplicate', async (req: AuthenticatedRequest, res) => {
  */
 router.post('/:deckId/cards', async (req: AuthenticatedRequest, res) => {
   try {
-    const { deckId } = req.params;
+    const deckId = req.params.deckId as string;
     const userId = req.user!.id;
 
     const deckCard = await deckService.addCardToDeck(deckId, userId, req.body);
@@ -192,7 +192,7 @@ router.post('/:deckId/cards', async (req: AuthenticatedRequest, res) => {
 // Bulk upsert deck cards
 router.post('/:deckId/cards/bulk', async (req: AuthenticatedRequest, res, next) => {
   try {
-    const deckId = req.params.deckId;
+    const deckId = req.params.deckId as string;
     const userId = req.user!.id;
     const operations = req.body?.operations;
     if (!Array.isArray(operations)) {
@@ -208,7 +208,7 @@ router.post('/:deckId/cards/bulk', async (req: AuthenticatedRequest, res, next) 
 // Validate deck
 router.get('/:deckId/validate', async (req: AuthenticatedRequest, res, next) => {
   try {
-    const deckId = req.params.deckId;
+    const deckId = req.params.deckId as string;
     const userId = req.user!.id;
     const result = await deckService.validateDeck(deckId, userId);
     res.json(result);
@@ -229,7 +229,9 @@ router.get('/:deckId/validate', async (req: AuthenticatedRequest, res, next) => 
  */
 router.put('/:deckId/cards/:cardId/:board', async (req: AuthenticatedRequest, res) => {
   try {
-    const { deckId, cardId, board } = req.params;
+    const deckId = req.params.deckId as string;
+    const cardId = req.params.cardId as string;
+    const board = req.params.board as string;
     const userId = req.user!.id;
 
     const deckCard = await deckService.updateDeckCard(deckId, userId, cardId, board, req.body);
@@ -263,7 +265,9 @@ router.put('/:deckId/cards/:cardId/:board', async (req: AuthenticatedRequest, re
  */
 router.delete('/:deckId/cards/:cardId/:board', async (req: AuthenticatedRequest, res) => {
   try {
-    const { deckId, cardId, board } = req.params;
+    const deckId = req.params.deckId as string;
+    const cardId = req.params.cardId as string;
+    const board = req.params.board as string;
     const userId = req.user!.id;
 
     await deckService.removeCardFromDeck(deckId, userId, cardId, board);
@@ -314,7 +318,7 @@ router.post('/import/mtga', async (req: AuthenticatedRequest, res) => {
  */
 router.get('/:deckId/export/mtga', async (req: AuthenticatedRequest, res) => {
   try {
-    const { deckId } = req.params;
+    const deckId = req.params.deckId as string;
     const userId = req.user!.id;
 
     const result = await deckService.exportToMTGA(deckId, userId);

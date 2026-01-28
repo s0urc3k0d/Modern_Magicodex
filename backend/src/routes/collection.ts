@@ -331,7 +331,7 @@ router.get('/stats', async (req: AuthenticatedRequest, res) => {
  */
 router.get('/sets/:setId/missing', async (req: AuthenticatedRequest, res) => {
   try {
-    const { setId } = req.params;
+    const setId = req.params.setId as string;
     const userId = req.user!.id;
 
   const extrasParam = (req.query.extras as string) ?? undefined;
@@ -428,7 +428,7 @@ router.post('/cards/bulk', collectionBulkLimiter, async (req: AuthenticatedReque
  */
 router.put('/cards/:cardId', collectionCardLimiter, async (req: AuthenticatedRequest, res) => {
   try {
-    const { cardId } = req.params;
+    const cardId = req.params.cardId as string;
     const userId = req.user!.id;
 
     const userCard = await collectionService.updateCardInCollection(userId, cardId, req.body);
@@ -460,7 +460,7 @@ router.put('/cards/:cardId', collectionCardLimiter, async (req: AuthenticatedReq
  */
 router.delete('/cards/:cardId', async (req: AuthenticatedRequest, res) => {
   try {
-    const { cardId } = req.params;
+    const cardId = req.params.cardId as string;
     const userId = req.user!.id;
 
     await collectionService.removeCardFromCollection(userId, cardId);

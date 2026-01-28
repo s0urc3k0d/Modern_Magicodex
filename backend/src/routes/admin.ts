@@ -75,7 +75,7 @@ router.get('/users', async (req: AuthenticatedRequest, res) => {
  */
 router.put('/users/:userId', async (req: AuthenticatedRequest, res) => {
   try {
-    const { userId } = req.params;
+    const userId = req.params.userId as string;
     
     const user = await adminService.updateUser(userId, req.body);
     
@@ -104,7 +104,7 @@ router.put('/users/:userId', async (req: AuthenticatedRequest, res) => {
  */
 router.delete('/users/:userId', async (req: AuthenticatedRequest, res) => {
   try {
-    const { userId } = req.params;
+    const userId = req.params.userId as string;
     
     // Empêcher l'auto-suppression
     if (userId === req.user!.id) {

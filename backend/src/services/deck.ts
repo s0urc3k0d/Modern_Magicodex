@@ -373,7 +373,7 @@ export class DeckService {
     // Fetch all cards referenced to validate existence once
     const uniqueCardIds = Array.from(new Set(operations.map(o => o.cardId)));
     const existingCards = await prisma.card.findMany({ where: { id: { in: uniqueCardIds } } });
-    const existingMap = new Set(existingCards.map(c => c.id));
+    const existingMap = new Set(existingCards.map((c: { id: string }) => c.id));
     const invalid = uniqueCardIds.filter(id => !existingMap.has(id));
     if (invalid.length) {
       throw new Error(`Cartes inexistantes: ${invalid.join(', ')}`);
@@ -417,11 +417,11 @@ export class DeckService {
     }
 
     const format = deck.format as string;
-    const mainboard = deck.deckCards.filter(dc => dc.board === 'main');
-    const sideboard = deck.deckCards.filter(dc => dc.board === 'side');
+    const mainboard = deck.deckCards.filter((dc: { board: string }) => dc.board === 'main');
+    const sideboard = deck.deckCards.filter((dc: { board: string }) => dc.board === 'side');
 
-    const mainCount = mainboard.reduce((s, dc) => s + dc.quantity, 0);
-    const sideCount = sideboard.reduce((s, dc) => s + dc.quantity, 0);
+    const mainCount = mainboard.reduce((s: number, dc: { quantity: number }) => s + dc.quantity, 0);
+    const sideCount = sideboard.reduce((s: number, dc: { quantity: number }) => s + dc.quantity, 0);
 
     // Rules lookups (mirroring frontend domain rules)
     const SINGLETON_FORMATS = new Set(['Commander']);
