@@ -74,11 +74,25 @@ export class HybridScryfallService {
         type: s.set_type,
         iconSvgUri: s.icon_svg_uri ?? '',
       };
-      const existing = await this.prisma.set.findUnique({ where: { code: payload.code } });
-      if (existing && !force) { processed++; continue; }
-      await this.prisma.set.upsert({ where: { code: payload.code }, update: payload, create: payload });
+      // Check by scryfallId first (primary key from Scryfall)
+      const existingById = await this.prisma.set.findUnique({ where: { scryfallId: payload.scryfallId } });
+      if (existingById && !force) { processed++; continue; }
+      
+      // Also check if code exists with different scryfallId (code changed in Scryfall)
+      const existingByCode = await this.prisma.set.findUnique({ where: { code: payload.code } });
+      if (existingByCode && existingByCode.scryfallId !== payload.scryfallId) {
+        // Code collision - update the existing record by scryfallId
+        console.log(`Set code collision: ${payload.code} (old scryfallId: ${existingByCode.scryfallId}, new: ${payload.scryfallId})`);
+      }
+      
+      // Upsert by scryfallId (the stable identifier from Scryfall)
+      await this.prisma.set.upsert({ 
+        where: { scryfallId: payload.scryfallId }, 
+        update: { ...payload, scryfallId: undefined }, // Don't update scryfallId itself
+        create: payload 
+      });
       processed++;
-      existing ? updated++ : created++;
+      existingById ? updated++ : created++;
       if (processed % 50 === 0) console.log(`Sets ${processed} (C:${created}/U:${updated})`);
     }
     await this.prisma.scryfallSync.create({
