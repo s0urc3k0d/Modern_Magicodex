@@ -424,10 +424,10 @@ const SalesPage = () => {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-mtg-secondary rounded-lg p-4 border border-gray-700">
+        <div className="bg-mtg-surface rounded-lg p-4 border border-gray-700">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/20 rounded-lg">
-              <Package className="w-6 h-6 text-blue-400" />
+            <div className="p-2 bg-mtg-primary/20 rounded-lg">
+              <Package className="w-6 h-6 text-mtg-primary" />
             </div>
             <div>
               <p className="text-sm text-gray-400">Articles</p>
@@ -435,10 +435,10 @@ const SalesPage = () => {
             </div>
           </div>
         </div>
-        <div className="bg-mtg-secondary rounded-lg p-4 border border-gray-700">
+        <div className="bg-mtg-surface rounded-lg p-4 border border-gray-700">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-500/20 rounded-lg">
-              <ShoppingCart className="w-6 h-6 text-green-400" />
+            <div className="p-2 bg-mtg-primary/20 rounded-lg">
+              <ShoppingCart className="w-6 h-6 text-mtg-primary" />
             </div>
             <div>
               <p className="text-sm text-gray-400">Cartes totales</p>
@@ -446,10 +446,10 @@ const SalesPage = () => {
             </div>
           </div>
         </div>
-        <div className="bg-mtg-secondary rounded-lg p-4 border border-gray-700">
+        <div className="bg-mtg-surface rounded-lg p-4 border border-gray-700">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-yellow-500/20 rounded-lg">
-              <Euro className="w-6 h-6 text-yellow-400" />
+            <div className="p-2 bg-mtg-gold/20 rounded-lg">
+              <Euro className="w-6 h-6 text-mtg-gold" />
             </div>
             <div>
               <p className="text-sm text-gray-400">Valeur totale</p>
@@ -459,10 +459,10 @@ const SalesPage = () => {
             </div>
           </div>
         </div>
-        <div className="bg-mtg-secondary rounded-lg p-4 border border-gray-700">
+        <div className="bg-mtg-surface rounded-lg p-4 border border-gray-700">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-orange-500/20 rounded-lg">
-              <AlertCircle className="w-6 h-6 text-orange-400" />
+            <div className="p-2 bg-gray-600/20 rounded-lg">
+              <AlertCircle className="w-6 h-6 text-gray-400" />
             </div>
             <div>
               <p className="text-sm text-gray-400">Sans prix</p>
@@ -473,7 +473,7 @@ const SalesPage = () => {
       </div>
 
       {/* Filtres */}
-      <div className="bg-mtg-secondary rounded-lg p-4 mb-6 border border-gray-700">
+      <div className="bg-mtg-surface rounded-lg p-4 mb-6 border border-gray-700">
         <div className="flex flex-col md:flex-row gap-4">
           {/* Recherche */}
           <div className="flex-1 relative">
@@ -554,7 +554,7 @@ const SalesPage = () => {
 
       {/* Liste des articles */}
       {filteredItems.length === 0 ? (
-        <div className="bg-mtg-secondary rounded-lg p-12 text-center border border-gray-700">
+        <div className="bg-mtg-surface rounded-lg p-12 text-center border border-gray-700">
           <ShoppingCart className="w-16 h-16 text-gray-600 mx-auto mb-4" />
           <h3 className="text-xl font-bold text-white mb-2">
             {salesData?.items.length ? 'Aucun résultat' : 'Liste de vente vide'}
