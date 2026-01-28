@@ -208,7 +208,8 @@ model UserListItem {
   cardId      String
   card        Card     @relation(fields: [cardId], references: [id])
 
-  @@unique([userId, cardId, type])
+  // Contrainte unique étendue pour permettre plusieurs entrées par carte avec différentes conditions
+  @@unique([userId, cardId, type, condition, language, isFoil, isSigned, isAltered])
   @@index([userId])
   @@index([cardId])
   @@index([type])
