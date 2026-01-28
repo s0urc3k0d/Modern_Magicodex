@@ -1,6 +1,8 @@
 # 🚀 Magicodex - Guide de Déploiement Complet
 
-Guide de déploiement de l'application Magicodex sur un serveur Ubuntu/Debian vierge avec **Node.js**, **PM2**, **PostgreSQL**, et **Nginx** en reverse proxy avec HTTPS.
+Guide de déploiement de l'application Magicodex sur un serveur Ubuntu/Debian avec **Node.js**, **PM2**, **PostgreSQL**, **Redis** et **Nginx** en reverse proxy avec HTTPS.
+
+> **Note** : Ce guide suppose que vous avez déjà PostgreSQL installé et configuré sur votre VPS. Si vous avez d'autres applications, les ports existants seront préservés.
 
 ---
 
@@ -10,17 +12,19 @@ Guide de déploiement de l'application Magicodex sur un serveur Ubuntu/Debian vi
 2. [Prérequis serveur](#2-prérequis-serveur)
 3. [Installation des dépendances système](#3-installation-des-dépendances-système)
 4. [Configuration PostgreSQL](#4-configuration-postgresql)
-5. [Déploiement de l'application](#5-déploiement-de-lapplication)
-6. [Configuration PM2](#6-configuration-pm2)
-7. [Configuration Nginx](#7-configuration-nginx)
-8. [Configuration HTTPS avec Certbot](#8-configuration-https-avec-certbot)
-9. [Variables d'environnement](#9-variables-denvironnement)
-10. [Scripts de maintenance](#10-scripts-de-maintenance)
-11. [Monitoring et logs](#11-monitoring-et-logs)
-12. [Sauvegarde et restauration](#12-sauvegarde-et-restauration)
-13. [Mise à jour de l'application](#13-mise-à-jour-de-lapplication)
-14. [Dépannage](#14-dépannage)
-15. [Checklist de déploiement](#15-checklist-de-déploiement)
+5. [Configuration Redis](#5-configuration-redis)
+6. [Déploiement de l'application](#6-déploiement-de-lapplication)
+7. [Configuration PM2](#7-configuration-pm2)
+8. [Configuration Nginx](#8-configuration-nginx)
+9. [Configuration HTTPS avec Certbot](#9-configuration-https-avec-certbot)
+10. [Variables d'environnement](#10-variables-denvironnement)
+11. [Scripts de maintenance](#11-scripts-de-maintenance)
+12. [Monitoring et logs](#12-monitoring-et-logs)
+13. [Sauvegarde et restauration](#13-sauvegarde-et-restauration)
+14. [Mise à jour de l'application](#14-mise-à-jour-de-lapplication)
+15. [Dépannage](#15-dépannage)
+16. [Checklist de déploiement](#16-checklist-de-déploiement)
+17. [Déploiement Docker (alternative)](#17-déploiement-docker-alternative)
 
 ---
 
@@ -33,7 +37,7 @@ Guide de déploiement de l'application Magicodex sur un serveur Ubuntu/Debian vi
                               │
                               ▼ (port 443 HTTPS)
 ┌─────────────────────────────────────────────────────────────────┐
-│                        NGINX                                     │
+│                        NGINX (existant)                          │
 │  - Reverse proxy                                                 │
 │  - Certificat SSL (Let's Encrypt)                               │
 │  - Compression gzip                                              │
@@ -44,25 +48,31 @@ Guide de déploiement de l'application Magicodex sur un serveur Ubuntu/Debian vi
           │                   │                   │
           ▼                   ▼                   ▼
 ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
-│  /api/*         │  │  /              │  │  /api/docs      │
-│  Backend API    │  │  Frontend SPA   │  │  Swagger UI     │
+│  /api/*         │  │  /              │  │  /api/metrics   │
+│  Backend API    │  │  Frontend SPA   │  │  Prometheus     │
 │  (port 3001)    │  │  (fichiers      │  │  (port 3001)    │
 │                 │  │   statiques)    │  │                 │
 └────────┬────────┘  └─────────────────┘  └─────────────────┘
          │
-         ▼
-┌─────────────────┐
-│   PostgreSQL    │
-│   (port 5432)   │
-└─────────────────┘
+    ┌────┴────┐
+    │         │
+    ▼         ▼
+┌────────┐  ┌────────┐
+│ Redis  │  │ Postgre│
+│ (6379) │  │ (5432) │
+│ Cache  │  │ Data   │
+└────────┘  └────────┘
 ```
 
-**Résumé :**
-- **Nginx** écoute sur les ports 80 (redirigé vers 443) et 443
-- Les requêtes `/api/*` sont proxifiées vers le backend Node.js (port 3001)
-- Les fichiers statiques du frontend sont servis directement par Nginx
-- **PM2** gère le processus Node.js avec redémarrage automatique
-- **PostgreSQL** stocke toutes les données utilisateur
+**Résumé - Ports utilisés :**
+| Service | Port | Usage |
+|---------|------|-------|
+| Nginx | 80, 443 | Reverse proxy HTTPS |
+| Backend API | 3001 | API Node.js (interne) |
+| PostgreSQL | 5432 | Base de données (existante) |
+| Redis | 6379 | Cache (nouveau) |
+
+> ⚠️ **Important** : Ces ports sont standards et ne devraient pas interférer avec vos autres applications. Redis sur 6379 est un ajout, vérifiez qu'il n'est pas déjà utilisé.
 
 ---
 
@@ -223,9 +233,68 @@ psql -U magicodex -d magicodex_prod -h localhost
 
 ---
 
-## 5. Déploiement de l'application
+## 5. Configuration Redis
 
-### 5.1 Création du répertoire de l'application
+Redis est utilisé pour le cache et améliore significativement les performances de l'API.
+
+### 5.1 Installation de Redis
+
+```bash
+# Installation
+sudo apt install -y redis-server
+
+# Démarrage et activation au boot
+sudo systemctl start redis-server
+sudo systemctl enable redis-server
+
+# Vérification
+sudo systemctl status redis-server
+redis-cli ping  # Devrait répondre PONG
+```
+
+### 5.2 Configuration de Redis (optionnel mais recommandé)
+
+```bash
+sudo nano /etc/redis/redis.conf
+```
+
+Modifications recommandées :
+
+```conf
+# Limite de mémoire (ajuster selon votre serveur)
+maxmemory 256mb
+maxmemory-policy allkeys-lru
+
+# Persistance (désactiver pour un cache pur - plus rapide)
+# save ""
+
+# Sécurité - écouter uniquement en local
+bind 127.0.0.1 ::1
+
+# Mot de passe (optionnel mais recommandé)
+# requirepass votre_mot_de_passe_redis
+```
+
+```bash
+# Redémarrer Redis après modifications
+sudo systemctl restart redis-server
+```
+
+### 5.3 Test de Redis
+
+```bash
+redis-cli
+> SET test "Hello"
+> GET test
+> DEL test
+> QUIT
+```
+
+---
+
+## 6. Déploiement de l'application
+
+### 6.1 Création du répertoire de l'application
 
 ```bash
 # Créer le répertoire de l'application
@@ -233,12 +302,13 @@ sudo mkdir -p /var/www/magicodex
 sudo chown -R $USER:$USER /var/www/magicodex
 ```
 
-### 5.2 Clonage du projet
+### 6.2 Clonage du projet
 
 ```bash
 cd /var/www/magicodex
 
 # Option A: Depuis Git
+
 git clone https://github.com/votre-repo/magicodex.git .
 
 # Option B: Upload via SCP depuis votre machine locale
@@ -249,7 +319,7 @@ git clone https://github.com/votre-repo/magicodex.git .
 # rsync -avz --exclude 'node_modules' --exclude '.git' -e ssh ./ user@serveur:/var/www/magicodex/
 ```
 
-### 5.3 Configuration des variables d'environnement
+### 6.3 Configuration des variables d'environnement
 
 ```bash
 # Créer le fichier .env pour le backend
@@ -262,9 +332,21 @@ Contenu du fichier `.env` :
 # === Base de données ===
 DATABASE_URL="postgresql://magicodex:motdepasse_securise@localhost:5432/magicodex_prod?schema=public"
 
+# === Redis Cache ===
+REDIS_URL="redis://localhost:6379"
+# Si Redis est protégé par mot de passe:
+# REDIS_URL="redis://:votre_mot_de_passe@localhost:6379"
+
 # === JWT ===
 # Générer avec: openssl rand -base64 64
 JWT_SECRET="VOTRE_CLE_SECRETE_TRES_LONGUE_ET_ALEATOIRE"
+JWT_ACCESS_EXPIRATION=15m
+JWT_REFRESH_EXPIRATION=7d
+
+# === Cookies (sécurité des tokens) ===
+COOKIE_SECRET="AUTRE_CLE_SECRETE_POUR_COOKIES"
+COOKIE_SECURE=true
+COOKIE_SAME_SITE=strict
 
 # === Serveur ===
 PORT=3001
@@ -276,15 +358,23 @@ FRONTEND_URL=https://magicodex.votre-domaine.com
 # === Rate Limiting ===
 RATE_LIMIT_WINDOW=60000
 RATE_LIMIT_MAX=100
+
+# === Monitoring (optionnel) ===
+ENABLE_METRICS=true
+LOG_LEVEL=info
 ```
 
-**Important** : Générer un vrai JWT_SECRET :
+**Important** : Générer les secrets :
 
 ```bash
+# JWT Secret
 openssl rand -base64 64
+
+# Cookie Secret
+openssl rand -base64 32
 ```
 
-### 5.4 Installation des dépendances et build
+### 6.4 Installation des dépendances et build
 
 ```bash
 # Backend
@@ -328,9 +418,9 @@ sudo chown www-data:www-data /var/www/magicodex/backend/.env
 
 ---
 
-## 6. Configuration PM2
+## 7. Configuration PM2
 
-### 6.1 Fichier de configuration PM2
+### 7.1 Fichier de configuration PM2
 
 Créer le fichier `/var/www/magicodex/ecosystem.config.cjs` :
 
@@ -434,9 +524,9 @@ pm2 show magicodex-api
 
 ---
 
-## 7. Configuration Nginx
+## 8. Configuration Nginx
 
-### 7.1 Création du fichier de configuration
+### 8.1 Création du fichier de configuration
 
 ```bash
 sudo nano /etc/nginx/sites-available/magicodex
@@ -580,9 +670,9 @@ sudo systemctl reload nginx
 
 ---
 
-## 8. Configuration HTTPS avec Certbot
+## 9. Configuration HTTPS avec Certbot
 
-### 8.1 Obtention du certificat SSL
+### 9.1 Obtention du certificat SSL
 
 **Note** : Assurez-vous que votre domaine pointe bien vers l'IP du serveur avant cette étape.
 
@@ -623,9 +713,9 @@ sudo systemctl list-timers | grep certbot
 
 ---
 
-## 9. Variables d'environnement
+## 10. Variables d'environnement
 
-### 9.1 Fichier .env complet pour la production
+### 10.1 Fichier .env complet pour la production
 
 ```env
 # ==================================================
@@ -635,6 +725,10 @@ sudo systemctl list-timers | grep certbot
 # === Base de données PostgreSQL ===
 # Format: postgresql://USER:PASSWORD@HOST:PORT/DATABASE?schema=SCHEMA
 DATABASE_URL="postgresql://magicodex:VOTRE_MOT_DE_PASSE@localhost:5432/magicodex_prod?schema=public"
+
+# === Cache Redis ===
+REDIS_URL="redis://localhost:6379"
+# Avec mot de passe: REDIS_URL="redis://:MOT_DE_PASSE@localhost:6379"
 
 # === Authentification JWT ===
 # IMPORTANT: Générer une clé unique avec: openssl rand -base64 64
@@ -679,9 +773,9 @@ cat /var/www/magicodex/.gitignore | grep .env
 
 ---
 
-## 10. Scripts de maintenance
+## 11. Scripts de maintenance
 
-### 10.1 Script de déploiement automatisé
+### 11.1 Script de déploiement automatisé
 
 Créer `/var/www/magicodex/scripts/deploy.sh` :
 
@@ -958,9 +1052,56 @@ crontab -e
 
 ---
 
-## 11. Monitoring et logs
+## 12. Monitoring et logs
 
-### 11.1 Visualisation des logs
+### 12.1 Endpoints de monitoring intégrés
+
+L'application expose des endpoints de monitoring prêts pour la production :
+
+```
+GET /api/health/live     → Vérification de vie (liveness probe)
+GET /api/health/ready    → Vérification de disponibilité (readiness probe)
+GET /api/metrics         → Métriques Prometheus
+```
+
+**Liveness probe** (`/api/health/live`) :
+```json
+{"status": "ok", "timestamp": "2024-01-01T12:00:00.000Z"}
+```
+
+**Readiness probe** (`/api/health/ready`) :
+```json
+{
+  "status": "ok",
+  "services": {
+    "database": "ok",
+    "redis": "ok"
+  },
+  "timestamp": "2024-01-01T12:00:00.000Z"
+}
+```
+
+**Métriques Prometheus** (`/api/metrics`) - format texte Prometheus incluant :
+- `http_requests_total` - Nombre total de requêtes HTTP
+- `http_request_duration_seconds` - Durée des requêtes
+- `nodejs_*` - Métriques Node.js (heap, event loop, GC)
+- `process_*` - Métriques processus (CPU, mémoire)
+
+### 12.2 Intégration Prometheus/Grafana (optionnel)
+
+Si vous utilisez Prometheus pour le monitoring centralisé :
+
+```yaml
+# prometheus.yml
+scrape_configs:
+  - job_name: 'magicodex'
+    static_configs:
+      - targets: ['localhost:3001']
+    metrics_path: '/api/metrics'
+    scheme: 'http'
+```
+
+### 12.3 Visualisation des logs
 
 ```bash
 # Logs PM2 (application) en temps réel
@@ -984,12 +1125,16 @@ sudo tail -f /var/log/nginx/magicodex_error.log
 # Logs PostgreSQL
 sudo tail -f /var/log/postgresql/postgresql-15-main.log
 
+# Logs Redis
+sudo tail -f /var/log/redis/redis-server.log
+
 # Logs système
 journalctl -u nginx -f
 journalctl -u postgresql -f
+journalctl -u redis-server -f
 ```
 
-### 11.2 Monitoring PM2
+### 12.4 Monitoring PM2
 
 ```bash
 # Dashboard temps réel (CPU, mémoire, requêtes)
@@ -1005,7 +1150,7 @@ pm2 jlist
 pm2 status
 ```
 
-### 11.3 Configuration Logrotate
+### 12.5 Configuration Logrotate
 
 Créer `/etc/logrotate.d/magicodex` :
 
@@ -1029,7 +1174,7 @@ sudo nano /etc/logrotate.d/magicodex
 }
 ```
 
-### 11.4 Commandes utiles de diagnostic
+### 12.6 Commandes utiles de diagnostic
 
 ```bash
 # Utilisation CPU/RAM
@@ -1044,21 +1189,28 @@ free -h
 # Processus Node.js
 ps aux | grep node
 
-# Connexions réseau
-ss -tlnp | grep -E '(3001|5432|80|443)'
+# Connexions réseau (inclut Redis sur 6379)
+ss -tlnp | grep -E '(3001|5432|6379|80|443)'
 
 # Connexions actives à PostgreSQL
 sudo -u postgres psql -c "SELECT * FROM pg_stat_activity WHERE datname='magicodex_prod';"
 
 # Taille de la base de données
 sudo -u postgres psql -c "SELECT pg_size_pretty(pg_database_size('magicodex_prod'));"
+
+# Statistiques Redis
+redis-cli INFO stats
+redis-cli INFO memory
+
+# Vérifier la santé de l'application
+curl http://localhost:3001/api/health/ready
 ```
 
 ---
 
-## 12. Sauvegarde et restauration
+## 13. Sauvegarde et restauration
 
-### 12.1 Sauvegarde manuelle
+### 13.1 Sauvegarde manuelle
 
 ```bash
 # Sauvegarde de la base de données
@@ -1100,16 +1252,16 @@ aws s3 cp /var/backups/magicodex/db_$(date +%Y%m%d).sql.gz s3://votre-bucket/mag
 
 ---
 
-## 13. Mise à jour de l'application
+## 14. Mise à jour de l'application
 
-### 13.1 Mise à jour standard
+### 14.1 Mise à jour standard
 
 ```bash
 # Utiliser le script de déploiement
 /var/www/magicodex/scripts/deploy.sh
 ```
 
-### 13.2 Mise à jour manuelle étape par étape
+### 14.2 Mise à jour manuelle étape par étape
 
 ```bash
 cd /var/www/magicodex
@@ -1167,9 +1319,9 @@ pm2 restart magicodex-api
 
 ---
 
-## 14. Dépannage
+## 15. Dépannage
 
-### 14.1 L'application ne démarre pas
+### 15.1 L'application ne démarre pas
 
 ```bash
 # 1. Vérifier les logs PM2
@@ -1286,7 +1438,7 @@ pm2 restart magicodex-api
 
 ---
 
-## 15. Checklist de déploiement
+## 16. Checklist de déploiement
 
 ### ✅ Avant le déploiement
 
@@ -1352,10 +1504,17 @@ pm2 restart magicodex-api
 - [ ] Test HTTPS réussi (accès via navigateur)
 - [ ] Renouvellement automatique configuré (`certbot renew --dry-run`)
 
+### ✅ Redis
+
+- [ ] Redis installé et démarré
+- [ ] Configuration mémoire ajustée
+- [ ] Test de connexion réussi (`redis-cli ping`)
+
 ### ✅ Post-déploiement
 
 - [ ] Application accessible publiquement
 - [ ] Inscription/Connexion fonctionnelle
+- [ ] Endpoints de santé fonctionnels (`/api/health/ready`)
 - [ ] Documentation API accessible (`/api/docs`)
 - [ ] Scripts de maintenance créés et exécutables
 - [ ] Sauvegarde automatique configurée (cron)
@@ -1364,15 +1523,117 @@ pm2 restart magicodex-api
 
 ---
 
+## 17. Déploiement Docker (alternative)
+
+Si vous préférez utiliser Docker pour le backend et Redis tout en conservant PostgreSQL et Nginx sur le VPS :
+
+### 17.1 Installation de Docker
+
+```bash
+# Installation Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+# Installation Docker Compose
+sudo apt install -y docker-compose-plugin
+
+# Ajouter l'utilisateur au groupe docker
+sudo usermod -aG docker $USER
+# Se reconnecter pour appliquer les changements
+```
+
+### 17.2 Configuration
+
+Créer le fichier `.env` dans le dossier `docker/` :
+
+```bash
+cd /var/www/magicodex/docker
+cp .env.example .env
+nano .env
+```
+
+```env
+# === Base de données (utiliser PostgreSQL existant sur le VPS) ===
+# host.docker.internal permet d'accéder aux services du VPS depuis Docker
+DATABASE_URL="postgresql://magicodex:motdepasse@host.docker.internal:5432/magicodex_prod?schema=public"
+
+# === Redis (conteneur Docker) ===
+REDIS_URL="redis://redis:6379"
+
+# === JWT ===
+JWT_SECRET="VOTRE_CLE_SECRETE_TRES_LONGUE"
+
+# === Configuration ===
+NODE_ENV=production
+PORT=3001
+FRONTEND_URL=https://magicodex.votre-domaine.com
+```
+
+### 17.3 Démarrage avec Docker Compose
+
+```bash
+cd /var/www/magicodex
+
+# Build et démarrage
+docker compose up -d --build
+
+# Vérifier les logs
+docker compose logs -f backend
+
+# Vérifier que tout fonctionne
+curl http://localhost:3001/api/health/ready
+```
+
+### 17.4 Configuration Nginx pour Docker
+
+La configuration Nginx reste identique - elle pointe toujours vers `localhost:3001`.
+
+```nginx
+location /api {
+    proxy_pass http://127.0.0.1:3001;
+    # ... reste de la configuration
+}
+```
+
+### 17.5 Gestion Docker
+
+```bash
+# Redémarrer l'application
+docker compose restart backend
+
+# Mise à jour
+git pull
+docker compose up -d --build
+
+# Logs
+docker compose logs -f
+
+# Arrêter
+docker compose down
+
+# Nettoyer les images inutilisées
+docker system prune -a
+```
+
+> **Note** : Avec Docker, PM2 n'est plus nécessaire car Docker gère le redémarrage automatique des conteneurs (`restart: unless-stopped`).
+
+---
+
 ## 📞 Commandes de référence rapide
 
 ```bash
-# === PM2 ===
+# === PM2 (déploiement classique) ===
 pm2 status                    # Statut de l'application
 pm2 logs magicodex-api       # Logs en temps réel
 pm2 restart magicodex-api    # Redémarrer
 pm2 reload magicodex-api     # Reload sans downtime
 pm2 monit                    # Dashboard monitoring
+
+# === Docker (déploiement conteneurisé) ===
+docker compose up -d          # Démarrer
+docker compose down           # Arrêter
+docker compose logs -f        # Logs
+docker compose restart        # Redémarrer
 
 # === Nginx ===
 sudo nginx -t                 # Tester la configuration
@@ -1383,9 +1644,19 @@ sudo systemctl restart nginx  # Redémarrer Nginx
 sudo -u postgres psql         # Console PostgreSQL
 sudo systemctl status postgresql
 
+# === Redis ===
+redis-cli ping                # Vérifier connexion
+redis-cli INFO stats          # Statistiques
+redis-cli FLUSHALL            # Vider le cache (attention!)
+
+# === Health checks ===
+curl http://localhost:3001/api/health/live
+curl http://localhost:3001/api/health/ready
+
 # === Logs ===
 pm2 logs magicodex-api --lines 100
 sudo tail -f /var/log/nginx/magicodex_error.log
+sudo tail -f /var/log/redis/redis-server.log
 
 # === Déploiement ===
 /var/www/magicodex/scripts/deploy.sh
@@ -1397,5 +1668,6 @@ sudo tail -f /var/log/nginx/magicodex_error.log
 ---
 
 **Document créé le** : 25 novembre 2025  
-**Version** : 2.0.0  
-**Stack** : Node.js 20 + Express 5 + PostgreSQL 15 + PM2 + Nginx + Let's Encrypt
+**Dernière mise à jour** : Janvier 2025  
+**Version** : 3.0.0  
+**Stack** : Node.js 20 + Express 5 + PostgreSQL 15 + Redis + PM2/Docker + Nginx + Let's Encrypt
