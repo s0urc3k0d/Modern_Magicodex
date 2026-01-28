@@ -385,47 +385,181 @@ npm run build
 
 ## 6. Configuration Nginx
 
-### 6.1 Création du fichier de configuration
+### 6.1 Version AVANT Certbot (HTTP uniquement)
+
+Cette configuration permet d'obtenir le certificat SSL via Certbot. Certbot modifiera ensuite automatiquement ce fichier.
 
 ```bash
 sudo nano /etc/nginx/sites-available/magicodex
 ```
 
 ```nginx
-# Configuration Nginx pour Magicodex
-# Remplacez 'magicodex.votre-domaine.com' par votre domaine
+# Configuration Nginx pour Magicodex - AVANT CERTBOT
+# Cette version est utilisée pour obtenir le certificat SSL
 
-# Redirection HTTP vers HTTPS
 server {
     listen 80;
     listen [::]:80;
-    server_name magicodex.votre-domaine.com;
-    
-    # Redirection permanente vers HTTPS
-    return 301 https://$server_name$request_uri;
+    server_name magicodex.sourcekod.fr www.magicodex.sourcekod.fr;
+
+    # === Logs ===
+    access_log /var/log/nginx/magicodex_access.log;
+    error_log /var/log/nginx/magicodex_error.log;
+
+    # === Fichiers statiques du frontend ===
+    root /var/www/magicodex/frontend/dist;
+    index index.html;
+
+    # Cache pour les assets statiques
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        access_log off;
+    }
+
+    # === API Backend ===
+    location /api {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_cache_bypass $http_upgrade;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+        client_max_body_size 10M;
+    }
+
+    # === Health check endpoint ===
+    location /health {
+        proxy_pass http://127.0.0.1:3001/health;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        access_log off;
+    }
+
+    # === SPA Fallback ===
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # === Sécurité ===
+    location ~ /\. {
+        deny all;
+        access_log off;
+        log_not_found off;
+    }
+
+    location ~ ^/(\.env|package\.json|tsconfig\.json|node_modules) {
+        deny all;
+    }
+}
+```
+
+### 6.2 Activation du site
+
+```bash
+# Créer le lien symbolique
+sudo ln -s /etc/nginx/sites-available/magicodex /etc/nginx/sites-enabled/
+
+# Supprimer la configuration par défaut
+sudo rm -f /etc/nginx/sites-enabled/default
+
+# Tester la configuration
+sudo nginx -t
+
+# Si le test est OK, recharger Nginx
+sudo systemctl reload nginx
+```
+
+---
+
+## 7. Configuration HTTPS avec Certbot
+
+### 7.1 Obtention du certificat SSL
+
+**Note** : Assurez-vous que votre domaine pointe bien vers l'IP du serveur avant cette étape.
+
+```bash
+# Obtenir le certificat (avec www et sans www)
+sudo certbot --nginx -d magicodex.sourcekod.fr -d www.magicodex.sourcekod.fr --email votre@email.com --agree-tos --non-interactive
+```
+
+Ou en mode interactif :
+
+```bash
+sudo certbot --nginx -d magicodex.sourcekod.fr -d www.magicodex.sourcekod.fr
+```
+
+Suivre les instructions :
+1. Entrer votre email
+2. Accepter les conditions
+3. Choisir si vous voulez partager votre email
+4. Certbot modifiera automatiquement la config Nginx
+
+### 7.2 Version APRÈS Certbot (HTTPS complet)
+
+Après l'exécution de Certbot, remplacez entièrement le fichier par cette version complète et optimisée :
+
+```bash
+sudo nano /etc/nginx/sites-available/magicodex
+```
+
+```nginx
+# Configuration Nginx pour Magicodex - VERSION COMPLÈTE avec HTTPS
+
+# Redirection HTTP vers HTTPS + www vers non-www
+server {
+    listen 80;
+    listen [::]:80;
+    server_name magicodex.sourcekod.fr www.magicodex.sourcekod.fr;
+
+    # Redirection permanente vers HTTPS (domaine principal)
+    return 301 https://magicodex.sourcekod.fr$request_uri;
+}
+
+# Redirection www vers non-www en HTTPS
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+
+    server_name www.magicodex.sourcekod.fr;
+
+    ssl_certificate /etc/letsencrypt/live/magicodex.sourcekod.fr/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/magicodex.sourcekod.fr/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    return 301 https://magicodex.sourcekod.fr$request_uri;
 }
 
 # Serveur HTTPS principal
 server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
-    server_name magicodex.votre-domaine.com;
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;  # Syntaxe moderne pour HTTP/2
 
-    # === Certificats SSL (sera configuré par Certbot) ===
-    # Ces lignes seront ajoutées automatiquement par certbot
-    # ssl_certificate /etc/letsencrypt/live/magicodex.votre-domaine.com/fullchain.pem;
-    # ssl_certificate_key /etc/letsencrypt/live/magicodex.votre-domaine.com/privkey.pem;
-    # include /etc/letsencrypt/options-ssl-nginx.conf;
-    # ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+    server_name magicodex.sourcekod.fr;
+
+    # === Certificats SSL (généré par Certbot) ===
+    ssl_certificate /etc/letsencrypt/live/magicodex.sourcekod.fr/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/magicodex.sourcekod.fr/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
     # === Sécurité HTTP Headers ===
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "1; mode=block" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-    
-    # Content Security Policy (adapté pour Scryfall)
-    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://cards.scryfall.io https://svgs.scryfall.io; font-src 'self'; connect-src 'self' https://api.scryfall.com;" always;
+
+    # Content Security Policy (adapté pour Scryfall + Google Fonts)
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: https://cards.scryfall.io https://svgs.scryfall.io; connect-src 'self' https://api.scryfall.com;" always;
 
     # === Logs ===
     access_log /var/log/nginx/magicodex_access.log;
@@ -463,23 +597,23 @@ server {
     location /api {
         proxy_pass http://127.0.0.1:3001;
         proxy_http_version 1.1;
-        
+
         # Headers pour le proxy
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        
+
         # WebSocket support (si nécessaire à l'avenir)
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
         proxy_cache_bypass $http_upgrade;
-        
+
         # Timeouts
         proxy_connect_timeout 60s;
         proxy_send_timeout 60s;
         proxy_read_timeout 60s;
-        
+
         # Taille max des requêtes (pour upload d'images, import bulk)
         client_max_body_size 10M;
     }
@@ -504,55 +638,24 @@ server {
         access_log off;
         log_not_found off;
     }
-    
+
     location ~ ^/(\.env|package\.json|tsconfig\.json|node_modules) {
         deny all;
     }
 }
 ```
 
-### 7.2 Activation du site
+Après modification :
 
 ```bash
-# Créer le lien symbolique
-sudo ln -s /etc/nginx/sites-available/magicodex /etc/nginx/sites-enabled/
-
-# Supprimer la configuration par défaut
-sudo rm -f /etc/nginx/sites-enabled/default
-
 # Tester la configuration
 sudo nginx -t
 
-# Si le test est OK, recharger Nginx
+# Recharger Nginx
 sudo systemctl reload nginx
 ```
 
----
-
-## 7. Configuration HTTPS avec Certbot
-
-### 9.1 Obtention du certificat SSL
-
-**Note** : Assurez-vous que votre domaine pointe bien vers l'IP du serveur avant cette étape.
-
-```bash
-# Obtenir le certificat (remplacez par votre domaine et email)
-sudo certbot --nginx -d magicodex.votre-domaine.com --email votre@email.com --agree-tos --non-interactive
-```
-
-Ou en mode interactif :
-
-```bash
-sudo certbot --nginx -d magicodex.votre-domaine.com
-```
-
-Suivre les instructions :
-1. Entrer votre email
-2. Accepter les conditions
-3. Choisir si vous voulez partager votre email
-4. Certbot modifiera automatiquement la config Nginx
-
-### 8.2 Vérification du certificat
+### 7.3 Vérification du certificat
 
 ```bash
 # Vérifier les certificats installés
@@ -562,7 +665,7 @@ sudo certbot certificates
 sudo certbot renew --dry-run
 ```
 
-### 8.3 Renouvellement automatique
+### 7.4 Renouvellement automatique
 
 Certbot configure automatiquement un timer systemd pour le renouvellement. Vérifier :
 
