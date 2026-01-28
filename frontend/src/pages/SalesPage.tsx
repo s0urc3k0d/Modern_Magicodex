@@ -330,7 +330,7 @@ const SaleCard = ({
           {/* Prix */}
           <div className="flex items-center justify-between mt-2">
             <div className="text-xs text-gray-500">
-              Marché: {item.card.priceEur?.toFixed(2) || '?'}€
+              Marché: {(item.isFoil ? (item.card.priceEurFoil || item.card.priceEur) : item.card.priceEur)?.toFixed(2) || '?'}€
             </div>
             <div className="font-bold text-mtg-gold">
               {item.askingPrice ? `${item.askingPrice.toFixed(2)}€` : 'Prix non défini'}
