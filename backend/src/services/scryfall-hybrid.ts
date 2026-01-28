@@ -64,9 +64,11 @@ export class HybridScryfallService {
   async syncSets(force = false) {
     const data = await this.http.getJson<{ data: ScrySet[] }>(`${this.base}/sets`);
     let processed = 0, created = 0, updated = 0;
+    console.log(`Starting sets sync, ${data.data.length} sets from Scryfall`);
+    
     for (const s of data.data) {
-      const payload = {
-        scryfallId: s.id,
+      const scryfallId = s.id;
+      const updateData = {
         code: s.code.toUpperCase(),
         name: s.name,
         releasedAt: s.released_at ? new Date(s.released_at) : null,
@@ -74,29 +76,25 @@ export class HybridScryfallService {
         type: s.set_type,
         iconSvgUri: s.icon_svg_uri ?? '',
       };
-      // Check by scryfallId first (primary key from Scryfall)
-      const existingById = await this.prisma.set.findUnique({ where: { scryfallId: payload.scryfallId } });
-      if (existingById && !force) { processed++; continue; }
       
-      // Also check if code exists with different scryfallId (code changed in Scryfall)
-      const existingByCode = await this.prisma.set.findUnique({ where: { code: payload.code } });
-      if (existingByCode && existingByCode.scryfallId !== payload.scryfallId) {
-        // Code collision - update the existing record by scryfallId
-        console.log(`Set code collision: ${payload.code} (old scryfallId: ${existingByCode.scryfallId}, new: ${payload.scryfallId})`);
-      }
+      // Check by scryfallId first (primary key from Scryfall)
+      const existingById = await this.prisma.set.findUnique({ where: { scryfallId } });
+      if (existingById && !force) { processed++; continue; }
       
       // Upsert by scryfallId (the stable identifier from Scryfall)
       await this.prisma.set.upsert({ 
-        where: { scryfallId: payload.scryfallId }, 
-        update: { ...payload, scryfallId: undefined }, // Don't update scryfallId itself
-        create: payload 
+        where: { scryfallId }, 
+        update: updateData,
+        create: { scryfallId, ...updateData }
       });
       processed++;
       existingById ? updated++ : created++;
       if (processed % 50 === 0) console.log(`Sets ${processed} (C:${created}/U:${updated})`);
     }
+    
+    console.log(`Sets sync completed: ${processed} processed, ${created} created, ${updated} updated`);
     await this.prisma.scryfallSync.create({
-      data: { type: 'sets', status: 'SUCCESS', lastSync: new Date(), message: `Hybrid: ${processed} sets`, recordsProcessed: processed }
+      data: { type: 'sets', status: 'SUCCESS', lastSync: new Date(), message: `Hybrid: ${processed} sets (C:${created}/U:${updated})`, recordsProcessed: processed }
     });
   }
 
