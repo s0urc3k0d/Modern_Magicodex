@@ -100,12 +100,15 @@ export class HybridScryfallService {
 
   // 2) Cards sync per set with EN+FR first pass
   async syncCardsBySet(setCode: string, force = false) {
-    const set = await this.prisma.set.findUnique({ where: { code: setCode.toUpperCase() } });
+    // Case-insensitive search for set code
+    const set = await this.prisma.set.findFirst({ 
+      where: { code: { equals: setCode, mode: 'insensitive' } } 
+    });
     if (!set) throw new Error(`Set ${setCode} not found in DB`);
 
-  // Use Scryfall set filter alias `e:` and filter by printed language.
-  const enUrl = `${this.base}/cards/search?q=${encodeURIComponent(`e:${setCode.toLowerCase()} lang:en`)}&unique=cards&order=set`;
-  const frUrl = `${this.base}/cards/search?q=${encodeURIComponent(`e:${setCode.toLowerCase()} lang:fr`)}&unique=cards&order=set`;
+    // Use Scryfall set filter alias `e:` and filter by printed language.
+    const enUrl = `${this.base}/cards/search?q=${encodeURIComponent(`e:${set.code.toLowerCase()} lang:en`)}&unique=cards&order=set`;
+    const frUrl = `${this.base}/cards/search?q=${encodeURIComponent(`e:${set.code.toLowerCase()} lang:fr`)}&unique=cards&order=set`;
 
     console.log(`Fetching EN for ${setCode}`);
     const enCards = await this.paginate<ScryCard>(enUrl);
