@@ -67,8 +67,9 @@ api.interceptors.response.use(
         
         const { token: newAccessToken } = response.data;
         
-        // Sauvegarder le nouveau access token
+        // Sauvegarder le nouveau access token et programmer le prochain refresh
         localStorage.setItem(ACCESS_TOKEN_KEY, newAccessToken);
+        scheduleTokenRefresh(newAccessToken);
         
         // Notifier les requêtes en attente
         onRefreshed(newAccessToken);
@@ -79,6 +80,10 @@ api.interceptors.response.use(
       } catch (refreshError) {
         // Refresh token invalide ou expiré, déconnecter
         clearTokens();
+        if (refreshTimer) {
+          clearTimeout(refreshTimer);
+          refreshTimer = null;
+        }
         window.location.href = '/login';
         return Promise.reject(refreshError);
       } finally {
@@ -93,18 +98,77 @@ api.interceptors.response.use(
 // Helper to clear access token (httpOnly cookie is cleared server-side on logout)
 function clearTokens() {
   localStorage.removeItem(ACCESS_TOKEN_KEY);
+  localStorage.removeItem('tokenExpiresAt');
+}
+
+// Helper to decode JWT and get expiration time
+function getTokenExpiration(token: string): number | null {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.exp ? payload.exp * 1000 : null; // Convert to milliseconds
+  } catch {
+    return null;
+  }
+}
+
+// Proactive token refresh - refresh 5 minutes before expiration
+let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleTokenRefresh(token: string) {
+  if (refreshTimer) {
+    clearTimeout(refreshTimer);
+    refreshTimer = null;
+  }
+  
+  const expiresAt = getTokenExpiration(token);
+  if (!expiresAt) return;
+  
+  // Save expiration for debugging
+  localStorage.setItem('tokenExpiresAt', new Date(expiresAt).toISOString());
+  
+  // Refresh 5 minutes before expiration (or immediately if less than 5 min left)
+  const refreshIn = Math.max(0, expiresAt - Date.now() - 5 * 60 * 1000);
+  
+  if (refreshIn > 0) {
+    refreshTimer = setTimeout(async () => {
+      try {
+        const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {}, {
+          withCredentials: true,
+        });
+        const { token: newToken } = response.data;
+        localStorage.setItem(ACCESS_TOKEN_KEY, newToken);
+        scheduleTokenRefresh(newToken); // Schedule next refresh
+        console.log('[Auth] Token proactively refreshed');
+      } catch (error) {
+        console.warn('[Auth] Proactive refresh failed, will retry on next request');
+      }
+    }, refreshIn);
+    console.log(`[Auth] Token refresh scheduled in ${Math.round(refreshIn / 60000)} minutes`);
+  }
+}
+
+// Initialize refresh schedule on page load
+const existingToken = localStorage.getItem(ACCESS_TOKEN_KEY);
+if (existingToken) {
+  scheduleTokenRefresh(existingToken);
 }
 
 export const authService = {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     const response = await api.post('/auth/login', credentials);
-    // Access token stored in localStorage, refresh token is in httpOnly cookie
+    // Schedule proactive refresh
+    if (response.data.token) {
+      scheduleTokenRefresh(response.data.token);
+    }
     return response.data;
   },
 
   async register(data: RegisterData): Promise<AuthResponse> {
     const response = await api.post('/auth/register', data);
-    // Access token stored in localStorage, refresh token is in httpOnly cookie
+    // Schedule proactive refresh
+    if (response.data.token) {
+      scheduleTokenRefresh(response.data.token);
+    }
     return response.data;
   },
 

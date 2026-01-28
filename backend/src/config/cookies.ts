@@ -14,9 +14,9 @@ export function getRefreshTokenCookieOptions(): CookieOptions {
   return {
     httpOnly: true,           // Not accessible via JavaScript
     secure: isProduction,     // HTTPS only in production
-    sameSite: 'strict',       // CSRF protection
-    path: '/api/auth',        // Only sent to auth routes
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+    sameSite: 'lax',          // Permet navigation normale tout en protégeant contre CSRF
+    path: '/',                // Envoyé pour toutes les routes (refresh plus fiable)
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 jours en millisecondes
   };
 }
 
@@ -27,15 +27,15 @@ export function getClearCookieOptions(): CookieOptions {
   return {
     httpOnly: true,
     secure: isProduction,
-    sameSite: 'strict',
-    path: '/api/auth',
+    sameSite: 'lax',
+    path: '/',
   };
 }
 
 // Token configuration
 export const TOKEN_CONFIG = {
-  ACCESS_TOKEN_EXPIRY: '15m',       // 15 minutes
-  REFRESH_TOKEN_EXPIRY_DAYS: 7,     // 7 days
+  ACCESS_TOKEN_EXPIRY: '1h',        // 1 heure (augmenté pour meilleure UX)
+  REFRESH_TOKEN_EXPIRY_DAYS: 30,    // 30 jours (augmenté pour moins de reconnexions)
   
   // Password requirements
   PASSWORD_MIN_LENGTH: 8,
