@@ -432,7 +432,7 @@ router.put('/cards/:cardId', collectionCardLimiter, async (req: AuthenticatedReq
     const cardId = req.params.cardId as string;
     const userId = req.user!.id;
     // La langue identifie l'entrée unique à mettre à jour
-    const language = (req.query.language as string) || req.body.language || 'en';
+    const language = (req.query.language as string) || req.body.language || 'fr';
 
     const userCard = await collectionService.updateCardInCollection(userId, cardId, language, req.body);
 
@@ -466,7 +466,7 @@ router.delete('/cards/:cardId', async (req: AuthenticatedRequest, res) => {
   try {
     const cardId = req.params.cardId as string;
     const userId = req.user!.id;
-    const language = (req.query.language as string) || 'en';
+    const language = (req.query.language as string) || 'fr';
 
     await collectionService.removeCardFromCollection(userId, cardId, language);
   invalidateCollectionStatsCache(userId);

@@ -16,7 +16,7 @@ const addCardToCollectionSchema = z.object({
   quantity: z.number().min(1).max(999).default(1),
   quantityFoil: z.number().min(0).max(999).default(0),
   condition: z.enum(['NM', 'LP', 'MP', 'HP', 'DMG']).default('NM'),
-  language: z.string().min(2).max(3).default('en'),
+  language: z.string().min(2).max(3).default('fr'),
   notes: z.string().optional()
 });
 
@@ -493,7 +493,7 @@ export class CollectionService {
     // Deduplicate by cardId+language (sum quantities for increment mode)
     const dedup = new Map<string, { cardId: string; quantity: number; quantityFoil: number; condition?: string; language: string; notes?: string }>();
     for (const it of items) {
-      const lang = it.language || 'en';
+      const lang = it.language || 'fr';
       const key = `${it.cardId}::${lang}`;
       const existing = dedup.get(key);
       if (existing) {
@@ -537,7 +537,7 @@ export class CollectionService {
                 quantity: entry.quantity,
                 quantityFoil: entry.quantityFoil,
                 condition: (entry.condition as any) || 'NM',
-                language: entry.language || 'en',
+                language: entry.language || 'fr',
                 notes: entry.notes
               }
             });
