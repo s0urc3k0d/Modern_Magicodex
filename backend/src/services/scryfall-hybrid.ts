@@ -200,6 +200,14 @@ export class HybridScryfallService {
         colorIdentity: colorId,
         rarity: en.rarity ?? 'common',
         collectorNumber: en.collector_number ?? '',
+        // Scryfall flags for extras detection
+        booster: en.booster ?? null,
+        promo: en.promo ?? null,
+        variation: en.variation ?? null,
+        fullArt: en.full_art ?? null,
+        frameEffects: en.frame_effects ? JSON.stringify(en.frame_effects) : null,
+        promoTypes: en.promo_types ? JSON.stringify(en.promo_types) : null,
+        borderColor: en.border_color ?? null,
         isExtra: computeIsExtra(en),
   // Base row in EN, with FR overlays where available
   lang: 'en',
