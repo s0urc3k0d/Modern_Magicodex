@@ -384,6 +384,16 @@ const SalesPage = () => {
     onError: () => toast.error('Erreur lors de la suppression'),
   });
 
+  const syncPricesMutation = useMutation({
+    mutationFn: () => salesService.syncMarketPrices(),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['sales'] });
+      queryClient.invalidateQueries({ queryKey: ['sales-stats'] });
+      toast.success(`${data.updated} prix synchronisés`);
+    },
+    onError: () => toast.error('Erreur lors de la synchronisation'),
+  });
+
   // Handlers
   const handleExport = async () => {
     try {
@@ -436,14 +446,25 @@ const SalesPage = () => {
             Gérez vos cartes à vendre et exportez vers Cardmarket
           </p>
         </div>
-        <button
-          onClick={handleExport}
-          disabled={!salesData?.items.length}
-          className="btn-primary flex items-center gap-2"
-        >
-          <Download className="w-5 h-5" />
-          Exporter CSV Cardmarket
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => syncPricesMutation.mutate()}
+            disabled={!salesData?.items.length || syncPricesMutation.isPending}
+            className="btn-outline flex items-center gap-2"
+            title="Synchroniser tous les prix avec le marché"
+          >
+            <RefreshCw className={`w-5 h-5 ${syncPricesMutation.isPending ? 'animate-spin' : ''}`} />
+            Sync prix marché
+          </button>
+          <button
+            onClick={handleExport}
+            disabled={!salesData?.items.length}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Download className="w-5 h-5" />
+            Exporter CSV Cardmarket
+          </button>
+        </div>
       </div>
 
       {/* Stats */}

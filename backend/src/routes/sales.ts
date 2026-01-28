@@ -410,6 +410,64 @@ router.delete('/:id', async (req: AuthenticatedRequest, res) => {
 
 /**
  * @swagger
+ * /sales/sync-market-prices:
+ *   post:
+ *     summary: Synchroniser tous les prix demandés avec les prix du marché
+ *     tags: [Sales]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.post('/sync-market-prices', async (req: AuthenticatedRequest, res) => {
+  try {
+    const userId = req.user!.id;
+
+    // Récupérer tous les items de vente avec les infos de carte
+    const saleItems = await prisma.userListItem.findMany({
+      where: {
+        userId,
+        type: 'FORSALE',
+      },
+      include: {
+        card: true,
+      },
+    });
+
+    if (saleItems.length === 0) {
+      return res.json({ message: 'Aucun article à synchroniser', updated: 0 });
+    }
+
+    // Mettre à jour chaque item avec le prix du marché
+    let updatedCount = 0;
+    await prisma.$transaction(async (tx: typeof prisma) => {
+      for (const item of saleItems) {
+        // Utiliser le prix foil si la carte est foil, sinon le prix normal
+        const marketPrice = item.isFoil 
+          ? (item.card.priceEurFoil || item.card.priceEur)
+          : item.card.priceEur;
+
+        if (marketPrice && marketPrice > 0) {
+          await tx.userListItem.update({
+            where: { id: item.id },
+            data: { askingPrice: marketPrice },
+          });
+          updatedCount++;
+        }
+      }
+    });
+
+    res.json({ 
+      message: `${updatedCount} prix synchronisés sur ${saleItems.length} articles`,
+      updated: updatedCount,
+      total: saleItems.length,
+    });
+  } catch (error) {
+    console.error('Sync market prices error:', error);
+    res.status(500).json({ error: 'Erreur lors de la synchronisation des prix' });
+  }
+});
+
+/**
+ * @swagger
  * /sales/export/cardmarket:
  *   get:
  *     summary: Exporter la liste de vente au format CSV Cardmarket

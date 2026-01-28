@@ -186,6 +186,14 @@ class SalesService {
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
   }
+
+  /**
+   * Synchroniser tous les prix demandés avec les prix du marché
+   */
+  async syncMarketPrices(): Promise<{ message: string; updated: number; total: number }> {
+    const response = await api.post('/sales/sync-market-prices');
+    return response.data;
+  }
 }
 
 export const salesService = new SalesService();
