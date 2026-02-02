@@ -90,21 +90,16 @@ export class CollectionService {
         _sum: {
           quantity: true,
           quantityFoil: true
-        },
-        having: {
-          OR: [
-            // Plus d'une carte normale, ou plus d'une foil, ou combinaison > 1
-          ]
         }
       });
       
       // Filtrer côté JS pour avoir total > 1
-      const withTotals = duplicates.map(d => ({
+      const withTotals = duplicates.map((d: { cardId: string; _sum: { quantity: number | null; quantityFoil: number | null } }) => ({
         cardId: d.cardId,
         total: (d._sum.quantity || 0) + (d._sum.quantityFoil || 0)
-      })).filter(d => d.total > 1);
+      })).filter((d: { cardId: string; total: number }) => d.total > 1);
       
-      duplicateCardIds = withTotals.map(d => d.cardId);
+      duplicateCardIds = withTotals.map((d: { cardId: string }) => d.cardId);
       
       // Si aucun doublon trouvé, retourner liste vide
       if (duplicateCardIds.length === 0) {
