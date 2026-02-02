@@ -8,19 +8,45 @@
  * Le script charge automatiquement les variables d'environnement depuis .env
  */
 
-// Charger les variables d'environnement depuis .env
-require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
 
-const { PrismaClient } = require('@prisma/client');
+// Charger manuellement le .env sans dépendance externe
+const envPath = path.join(__dirname, '..', '.env');
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf-8');
+  envContent.split('\n').forEach(line => {
+    const match = line.match(/^([^#=]+)=(.*)$/);
+    if (match) {
+      const key = match[1].trim();
+      const value = match[2].trim().replace(/^["']|["']$/g, '');
+      if (!process.env[key]) {
+        process.env[key] = value;
+      }
+    }
+  });
+  console.log('✅ Variables d\'environnement chargées depuis .env');
+}
 
 // Vérifier que DATABASE_URL est défini
 if (!process.env.DATABASE_URL) {
   console.error('❌ DATABASE_URL non défini. Assurez-vous que le fichier .env existe et contient DATABASE_URL.');
+  console.error('   Vous pouvez aussi l\'exporter manuellement: export DATABASE_URL="postgresql://..."');
   process.exit(1);
 }
 
 console.log('📦 Connexion à la base de données...');
-const prisma = new PrismaClient();
+
+// Utiliser Prisma depuis node_modules du backend (via Docker volume ou installation locale)
+// Si pas disponible, on utilise pg directement
+let prisma;
+try {
+  const { PrismaClient } = require('@prisma/client');
+  prisma = new PrismaClient();
+} catch (e) {
+  console.log('⚠️  Prisma non disponible, utilisation de pg directement...');
+  prisma = null;
+}
 
 // NOT included: fullart, legendary, enchantment, miracle, nyxtouched, companion, etc. (normal card frames)
 const extraFrameEffects = ['extendedart', 'showcase', 'borderless', 'etched', 'inverted', 'shatteredglass', 'textless'];
