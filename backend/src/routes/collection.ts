@@ -490,7 +490,7 @@ router.get('/lists', async (req: AuthenticatedRequest, res) => {
   const prismaAny = prisma as any;
   const items = await prismaAny.userListItem.findMany({
       where: { userId },
-      include: { card: true },
+      include: { card: { include: { set: true } } },
       orderBy: { createdAt: 'desc' }
     });
     res.json(items);
