@@ -520,7 +520,6 @@ router.post('/lists', async (req: AuthenticatedRequest, res) => {
   }
 });
 
-export default router;
 // Delete item
 router.delete('/lists/:id', async (req: AuthenticatedRequest, res) => {
   try {
@@ -536,3 +535,5 @@ router.delete('/lists/:id', async (req: AuthenticatedRequest, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+
+export default router;
