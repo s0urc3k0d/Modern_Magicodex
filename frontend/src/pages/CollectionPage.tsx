@@ -38,6 +38,10 @@ const CollectionPage = () => {
   // Server-side pagination state
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(60);
+  
+  // When groupBySet is active, we need all cards - use a very high limit
+  const effectiveLimit = groupBySet ? 10000 : limit;
+  const effectivePage = groupBySet ? 1 : page;
 
   const queryClient = useQueryClient();
 
@@ -49,7 +53,7 @@ const CollectionPage = () => {
 
   // Récupération de la collection page par page (serveur applique filtres + tri)
   const { data: collectionData, isLoading: collectionLoading } = useQuery<{ userCards: any[]; pagination?: { totalPages: number; totalItems?: number } }>({
-    queryKey: ['collection', page, limit, searchQuery, rarity, colors, typeContains, textContains, textModeAnd, priceMin, priceMax, sortBy, sortOrder, onlyOwned, onlyExtras],
+    queryKey: ['collection', effectivePage, effectiveLimit, searchQuery, rarity, colors, typeContains, textContains, textModeAnd, priceMin, priceMax, sortBy, sortOrder, onlyOwned, onlyExtras, groupBySet],
     queryFn: async () => {
       const serverFilters = {
         colors: colors.length ? colors : undefined,
@@ -64,7 +68,7 @@ const CollectionPage = () => {
         sort: sortBy,
         order: sortOrder,
       };
-      return collectionService.getCollection(page, limit, searchQuery, serverFilters);
+      return collectionService.getCollection(effectivePage, effectiveLimit, searchQuery, serverFilters);
     },
     placeholderData: (prev) => prev as any,
   });

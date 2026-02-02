@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { prisma } from '../db/prisma';
+import { computeIsExtra } from '../utils/extras';
 
 export interface ScryfallSet {
   id: string;
@@ -224,17 +225,16 @@ export class ScryfallService {
               }
             }
 
-      // Compute isExtra from Scryfall flags
-      const frameEffects = (cardData.frame_effects || []) as any;
-      const promoTypes = (cardData.promo_types || []) as any;
-      // Special frame effects that indicate extras (showcase, borderless treatments, etc.)
-      const extraFrameEffects = ['extendedart', 'showcase', 'borderless', 'etched', 'inverted', 'shatteredglass', 'textless', 'fandfc'];
-      const hasSpecialFrame = Array.isArray(frameEffects) && frameEffects.some((f: string) => extraFrameEffects.includes(f));
-      const hasPromo = cardData.promo === true || (Array.isArray(promoTypes) && promoTypes.length > 0);
-      const isNonBooster = cardData.booster === false;
-      const isVariation = cardData.variation === true;
-      // Note: full_art alone is NOT an indicator of extras - many normal cards are full-art
-      const isExtra = Boolean(hasPromo || isVariation || hasSpecialFrame || isNonBooster);
+      // Compute isExtra using shared helper (handles NON_EXTRA_PROMO_TYPES correctly)
+      const isExtra = computeIsExtra({
+        booster: cardData.booster,
+        promo: cardData.promo,
+        variation: cardData.variation,
+        full_art: cardData.full_art,
+        frame_effects: cardData.frame_effects,
+        promo_types: cardData.promo_types,
+        border_color: cardData.border_color,
+      });
 
   const prismaAny = prisma as any;
   await prismaAny.card.upsert({
