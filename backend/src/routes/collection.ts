@@ -504,13 +504,17 @@ router.get('/lists', async (req: AuthenticatedRequest, res) => {
 router.post('/lists', async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user!.id;
-    const { cardId, type, quantity = 1, notes } = req.body || {};
+    const { cardId, type, quantity = 1, notes, condition = 'NM', language = 'en', isFoil = false, isSigned = false, isAltered = false, askingPrice } = req.body || {};
     if (!cardId || !type) return res.status(400).json({ error: 'cardId et type requis' });
-  const prismaAny = prisma as any;
-  const item = await prismaAny.userListItem.upsert({
-      where: { userId_cardId_type: { userId, cardId, type } as any },
-      update: { quantity, notes },
-      create: { userId, cardId, type, quantity, notes },
+    const prismaAny = prisma as any;
+    const item = await prismaAny.userListItem.upsert({
+      where: { 
+        userId_cardId_type_condition_language_isFoil_isSigned_isAltered: { 
+          userId, cardId, type, condition, language, isFoil, isSigned, isAltered 
+        } 
+      },
+      update: { quantity, notes, askingPrice },
+      create: { userId, cardId, type, quantity, notes, condition, language, isFoil, isSigned, isAltered, askingPrice },
       include: { card: true }
     });
     res.status(201).json(item);

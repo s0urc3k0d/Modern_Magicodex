@@ -5,10 +5,17 @@ import { collectionService } from '../services/collection';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
 import CardDisplay from '../components/CardDisplay';
+import type { ListType } from '../types';
 
 const MissingBySetPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const queryClient = useQueryClient();
+
+  // Fetch existing list items to know what's already in wishlist/trade
+  const { data: listsData } = useQuery({ 
+    queryKey: ['lists'], 
+    queryFn: () => collectionService.getListItems() 
+  });
 
   // 1) Get collection stats grouped by set to know which sets the user owns at least one card
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -30,6 +37,24 @@ const MissingBySetPage = () => {
       if (next.has(key)) next.delete(key); else next.add(key);
       return next;
     });
+  };
+
+  // Handler for toggling wishlist/trade list items
+  const handleToggleListItem = async (cardId: string, type: ListType) => {
+    try {
+      const existing = listsData?.find((li: any) => li.cardId === cardId && li.type === type);
+      if (existing) {
+        await collectionService.deleteListItem(existing.id);
+        toast.success(type === 'WISHLIST' ? 'Retiré de la Wishlist' : 'Retiré de la Trade list');
+      } else {
+        await collectionService.upsertListItem(cardId, type, 1);
+        toast.success(type === 'WISHLIST' ? 'Ajouté à la Wishlist' : 'Ajouté à la Trade list');
+      }
+      queryClient.invalidateQueries({ queryKey: ['lists'] });
+    } catch {
+      toast.error('Action liste échouée');
+    }
+    return null;
   };
 
   // Mutation to add a missing card to collection
@@ -109,6 +134,7 @@ const MissingBySetPage = () => {
                   card={card}
                   userCard={null}
                   showQuantityControls={false}
+                  onToggleListItem={handleToggleListItem}
                 />
                 <button
                   onClick={() => handleAdd(card.id)}
