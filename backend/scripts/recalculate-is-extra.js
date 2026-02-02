@@ -1,12 +1,25 @@
 /**
  * Recalculates the isExtra field for all cards based on the corrected logic.
  * 
- * Usage: node scripts/recalculate-is-extra.js
- * In Docker: docker exec -it magicodex-backend node scripts/recalculate-is-extra.js
+ * Usage depuis le VPS (hors Docker):
+ *   cd /var/www/magicodex/backend
+ *   node scripts/recalculate-is-extra.js
+ * 
+ * Le script charge automatiquement les variables d'environnement depuis .env
  */
+
+// Charger les variables d'environnement depuis .env
+require('dotenv').config();
 
 const { PrismaClient } = require('@prisma/client');
 
+// Vérifier que DATABASE_URL est défini
+if (!process.env.DATABASE_URL) {
+  console.error('❌ DATABASE_URL non défini. Assurez-vous que le fichier .env existe et contient DATABASE_URL.');
+  process.exit(1);
+}
+
+console.log('📦 Connexion à la base de données...');
 const prisma = new PrismaClient();
 
 // NOT included: fullart, legendary, enchantment, miracle, nyxtouched, companion, etc. (normal card frames)
