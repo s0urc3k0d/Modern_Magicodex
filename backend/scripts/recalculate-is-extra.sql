@@ -1,77 +1,75 @@
 -- Recalcule isExtra pour toutes les cartes basé sur la logique corrigée
 -- 
 -- Usage:
---   psql -h localhost -U magicodex -d magicodex -f scripts/recalculate-is-extra.sql
--- ou
---   psql $DATABASE_URL -f scripts/recalculate-is-extra.sql
+--   psql "postgresql://user:pass@host:5432/db" -f scripts/recalculate-is-extra.sql
 
 -- Afficher le nombre de cartes avant correction
 SELECT 
   'Avant correction:' as status,
-  COUNT(*) FILTER (WHERE "isExtra" = true) as extras,
-  COUNT(*) FILTER (WHERE "isExtra" = false) as standard,
+  COUNT(*) FILTER (WHERE is_extra = true) as extras,
+  COUNT(*) FILTER (WHERE is_extra = false) as standard,
   COUNT(*) as total
-FROM "Card";
+FROM cards;
 
--- Mettre à jour isExtra = false pour les cartes qui ne devraient PAS être extras
+-- Mettre à jour is_extra = false pour les cartes qui ne devraient PAS être extras
 -- (cartes avec uniquement universesbeyond, boosterfun, etc. comme promo_types)
-UPDATE "Card"
-SET "isExtra" = false, "updatedAt" = NOW()
-WHERE "isExtra" = true
-  AND "promo" IS NOT TRUE
-  AND "variation" IS NOT TRUE  
-  AND "booster" IS NOT FALSE
+UPDATE cards
+SET is_extra = false, updated_at = NOW()
+WHERE is_extra = true
+  AND promo IS NOT TRUE
+  AND variation IS NOT TRUE  
+  AND booster IS NOT FALSE
   AND (
-    "frameEffects" IS NULL 
-    OR "frameEffects" = '[]'
+    frame_effects IS NULL 
+    OR frame_effects = '[]'
     OR NOT (
-      "frameEffects"::text ILIKE '%extendedart%'
-      OR "frameEffects"::text ILIKE '%showcase%'
-      OR "frameEffects"::text ILIKE '%borderless%'
-      OR "frameEffects"::text ILIKE '%etched%'
-      OR "frameEffects"::text ILIKE '%inverted%'
-      OR "frameEffects"::text ILIKE '%shatteredglass%'
-      OR "frameEffects"::text ILIKE '%textless%'
+      frame_effects::text ILIKE '%extendedart%'
+      OR frame_effects::text ILIKE '%showcase%'
+      OR frame_effects::text ILIKE '%borderless%'
+      OR frame_effects::text ILIKE '%etched%'
+      OR frame_effects::text ILIKE '%inverted%'
+      OR frame_effects::text ILIKE '%shatteredglass%'
+      OR frame_effects::text ILIKE '%textless%'
     )
   )
   AND (
-    "promoTypes" IS NULL 
-    OR "promoTypes" = '[]'
+    promo_types IS NULL 
+    OR promo_types = '[]'
     OR (
       -- Seulement des promo types non-extra (universesbeyond, boosterfun, ff*)
-      "promoTypes"::text ILIKE '%universesbeyond%'
-      OR "promoTypes"::text ILIKE '%boosterfun%'
-      OR "promoTypes"::text ~ '"ff[ivx]+'
+      promo_types::text ILIKE '%universesbeyond%'
+      OR promo_types::text ILIKE '%boosterfun%'
+      OR promo_types::text ~ '"ff[ivx]+'
     )
     AND NOT (
       -- Pas de vrais promo types
-      "promoTypes"::text ILIKE '%prerelease%'
-      OR "promoTypes"::text ILIKE '%promopacks%'
-      OR "promoTypes"::text ILIKE '%bundle%'
-      OR "promoTypes"::text ILIKE '%buyabox%'
-      OR "promoTypes"::text ILIKE '%gameday%'
-      OR "promoTypes"::text ILIKE '%intropack%'
-      OR "promoTypes"::text ILIKE '%league%'
-      OR "promoTypes"::text ILIKE '%planeswalkerstamped%'
-      OR "promoTypes"::text ILIKE '%playerrewards%'
-      OR "promoTypes"::text ILIKE '%premiereshop%'
-      OR "promoTypes"::text ILIKE '%release%'
-      OR "promoTypes"::text ILIKE '%setpromo%'
-      OR "promoTypes"::text ILIKE '%stamped%'
-      OR "promoTypes"::text ILIKE '%tourney%'
-      OR "promoTypes"::text ILIKE '%wizardsplaynetwork%'
+      promo_types::text ILIKE '%prerelease%'
+      OR promo_types::text ILIKE '%promopacks%'
+      OR promo_types::text ILIKE '%bundle%'
+      OR promo_types::text ILIKE '%buyabox%'
+      OR promo_types::text ILIKE '%gameday%'
+      OR promo_types::text ILIKE '%intropack%'
+      OR promo_types::text ILIKE '%league%'
+      OR promo_types::text ILIKE '%planeswalkerstamped%'
+      OR promo_types::text ILIKE '%playerrewards%'
+      OR promo_types::text ILIKE '%premiereshop%'
+      OR promo_types::text ILIKE '%release%'
+      OR promo_types::text ILIKE '%setpromo%'
+      OR promo_types::text ILIKE '%stamped%'
+      OR promo_types::text ILIKE '%tourney%'
+      OR promo_types::text ILIKE '%wizardsplaynetwork%'
     )
   );
 
 -- Afficher le nombre de lignes modifiées
 SELECT 'Cartes mises à jour (extras -> standard):' as status, COUNT(*) as count
-FROM "Card" 
-WHERE "updatedAt" > NOW() - INTERVAL '1 minute';
+FROM cards 
+WHERE updated_at > NOW() - INTERVAL '1 minute';
 
 -- Afficher le nombre de cartes après correction
 SELECT 
   'Après correction:' as status,
-  COUNT(*) FILTER (WHERE "isExtra" = true) as extras,
-  COUNT(*) FILTER (WHERE "isExtra" = false) as standard,
+  COUNT(*) FILTER (WHERE is_extra = true) as extras,
+  COUNT(*) FILTER (WHERE is_extra = false) as standard,
   COUNT(*) as total
-FROM "Card";
+FROM cards;
