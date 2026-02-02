@@ -26,7 +26,7 @@ router.use(authenticateToken);
 // Schémas de validation pour les query parameters
 const collectionQuerySchema = z.object({
   page: z.string().optional().transform(val => val ? parseInt(val) : 1),
-  limit: z.string().optional().transform(val => val ? Math.min(parseInt(val), 500) : 50),
+  limit: z.string().optional().transform(val => val ? Math.min(parseInt(val), 10000) : 50),
   setId: z.string().optional(),
   colors: z.string().optional().transform(val => val ? val.split(',') : undefined),
   rarity: z.enum(['common', 'uncommon', 'rare', 'mythic']).optional(),
