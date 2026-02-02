@@ -102,7 +102,7 @@ export class CollectionService {
       duplicateCardIds = withTotals.map((d: { cardId: string }) => d.cardId);
       
       // Si aucun doublon trouvé, retourner liste vide
-      if (duplicateCardIds.length === 0) {
+      if (!duplicateCardIds || duplicateCardIds.length === 0) {
         return {
           userCards: [],
           pagination: { page, limit, total: 0, totalPages: 0 }
