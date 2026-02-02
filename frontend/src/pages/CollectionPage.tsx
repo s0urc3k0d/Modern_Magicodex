@@ -35,6 +35,7 @@ const CollectionPage = () => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [onlyOwned, setOnlyOwned] = useState<boolean>(false);
   const [onlyExtras, setOnlyExtras] = useState<boolean | undefined>(undefined);
+  const [onlyDuplicates, setOnlyDuplicates] = useState<boolean>(false);
   // Server-side pagination state
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(60);
@@ -53,7 +54,7 @@ const CollectionPage = () => {
 
   // Récupération de la collection page par page (serveur applique filtres + tri)
   const { data: collectionData, isLoading: collectionLoading } = useQuery<{ userCards: any[]; pagination?: { totalPages: number; totalItems?: number } }>({
-    queryKey: ['collection', effectivePage, effectiveLimit, searchQuery, rarity, colors, typeContains, textContains, textModeAnd, priceMin, priceMax, sortBy, sortOrder, onlyOwned, onlyExtras, groupBySet],
+    queryKey: ['collection', effectivePage, effectiveLimit, searchQuery, rarity, colors, typeContains, textContains, textModeAnd, priceMin, priceMax, sortBy, sortOrder, onlyOwned, onlyExtras, onlyDuplicates, groupBySet],
     queryFn: async () => {
       const serverFilters = {
         colors: colors.length ? colors : undefined,
@@ -65,6 +66,7 @@ const CollectionPage = () => {
         maxEur: priceMax ? Number(priceMax) : undefined,
         hasCard: onlyOwned || undefined,
         extras: typeof onlyExtras === 'boolean' ? onlyExtras : undefined,
+        duplicates: onlyDuplicates || undefined,
         sort: sortBy,
         order: sortOrder,
       };
@@ -92,13 +94,14 @@ const CollectionPage = () => {
     if (priceMax) params.set('max', priceMax); else params.delete('max');
     if (onlyOwned) params.set('owned', '1'); else params.delete('owned');
     if (typeof onlyExtras === 'boolean') params.set('extras', onlyExtras ? '1' : '0'); else params.delete('extras');
+    if (onlyDuplicates) params.set('duplicates', '1'); else params.delete('duplicates');
     params.set('sort', sortBy);
     params.set('order', sortOrder);
     params.set('page', String(page));
     params.set('limit', String(limit));
     const url = `${window.location.pathname}?${params.toString()}`;
     window.history.replaceState(null, '', url);
-  }, [searchQuery, rarity, colors, typeContains, textContains, textModeAnd, priceMin, priceMax, onlyOwned, onlyExtras, sortBy, sortOrder, page, limit]);
+  }, [searchQuery, rarity, colors, typeContains, textContains, textModeAnd, priceMin, priceMax, onlyOwned, onlyExtras, onlyDuplicates, sortBy, sortOrder, page, limit]);
 
   useEffect(() => {
     // Load from URL on mount
@@ -115,6 +118,7 @@ const CollectionPage = () => {
     setOnlyOwned((params.get('owned') || '') === '1');
     const extrasParam = params.get('extras');
     setOnlyExtras(extrasParam === '1' ? true : extrasParam === '0' ? false : undefined);
+    setOnlyDuplicates((params.get('duplicates') || '') === '1');
     const s = (params.get('sort') as any) || 'releasedAt';
     const o = (params.get('order') as any) || (s === 'price' || s === 'releasedAt' ? 'desc' : 'asc');
     setSortBy(['releasedAt','name','collectorNumber','price'].includes(s) ? s : 'releasedAt');
@@ -126,7 +130,7 @@ const CollectionPage = () => {
   // Reset page when filters/search change (except page & limit themselves)
   useEffect(() => {
     setPage(1);
-  }, [searchQuery, rarity, colors, typeContains, textContains, textModeAnd, priceMin, priceMax, onlyOwned, onlyExtras, sortBy, sortOrder]);
+  }, [searchQuery, rarity, colors, typeContains, textContains, textModeAnd, priceMin, priceMax, onlyOwned, onlyExtras, onlyDuplicates, sortBy, sortOrder]);
 
   // Mutations pour gérer la collection
   const addToCollectionMutation = useMutation({
@@ -497,6 +501,10 @@ const CollectionPage = () => {
           <div className="flex items-center gap-2 mt-2">
             <input id="ownedOnly" type="checkbox" checked={onlyOwned} onChange={(e)=>setOnlyOwned(e.target.checked)} />
             <label htmlFor="ownedOnly" className="text-sm text-gray-300">Afficher seulement les cartes possédées</label>
+          </div>
+          <div className="flex items-center gap-2 mt-2">
+            <input id="duplicatesOnly" type="checkbox" checked={onlyDuplicates} onChange={(e)=>setOnlyDuplicates(e.target.checked)} />
+            <label htmlFor="duplicatesOnly" className="text-sm text-gray-300">Afficher seulement les doublons (+1 exemplaire)</label>
           </div>
           <div className="flex items-center gap-2 mt-2">
             <select value={typeof onlyExtras === 'boolean' ? (onlyExtras ? 'only' : 'no') : 'all'} onChange={(e)=>{

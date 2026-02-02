@@ -29,6 +29,7 @@ export const collectionService = {
       rarity?: string;
       hasCard?: boolean;
       extras?: boolean;
+      duplicates?: boolean;
       typeContains?: string;
       text?: string;
       textMode?: 'and' | 'or';
@@ -49,6 +50,7 @@ export const collectionService = {
     if (filters?.rarity) params.append('rarity', filters.rarity);
   if (typeof filters?.hasCard === 'boolean') params.append('hasCard', String(filters.hasCard));
   if (typeof filters?.extras === 'boolean') params.append('extras', String(filters.extras));
+  if (filters?.duplicates) params.append('duplicates', 'true');
   if (filters?.typeContains) params.append('typeContains', filters.typeContains);
   if (filters?.text) params.append('text', filters.text);
   if (filters?.textMode) params.append('textMode', filters.textMode);

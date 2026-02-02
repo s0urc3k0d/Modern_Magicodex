@@ -65,6 +65,7 @@ export class CollectionService {
       search?: string;
       hasCard?: boolean; // true = seulement les cartes possédées
       extras?: boolean;
+      duplicates?: boolean; // true = seulement les cartes avec plus d'un exemplaire (toutes langues confondues)
       typeContains?: string;
       textWords?: string[];
       textMode?: 'and' | 'or';
@@ -77,20 +78,57 @@ export class CollectionService {
     }
   ) {
     const offset = (page - 1) * limit;
+    const f = filters || {} as any;
+
+    // Si filtre duplicates, on doit d'abord trouver les cardIds avec plus d'un exemplaire (toutes langues)
+    let duplicateCardIds: string[] | undefined;
+    if (f.duplicates) {
+      // Agrège par cardId la somme totale de quantity + quantityFoil
+      const duplicates = await prisma.userCard.groupBy({
+        by: ['cardId'],
+        where: { userId },
+        _sum: {
+          quantity: true,
+          quantityFoil: true
+        },
+        having: {
+          OR: [
+            // Plus d'une carte normale, ou plus d'une foil, ou combinaison > 1
+          ]
+        }
+      });
+      
+      // Filtrer côté JS pour avoir total > 1
+      const withTotals = duplicates.map(d => ({
+        cardId: d.cardId,
+        total: (d._sum.quantity || 0) + (d._sum.quantityFoil || 0)
+      })).filter(d => d.total > 1);
+      
+      duplicateCardIds = withTotals.map(d => d.cardId);
+      
+      // Si aucun doublon trouvé, retourner liste vide
+      if (duplicateCardIds.length === 0) {
+        return {
+          userCards: [],
+          pagination: { page, limit, total: 0, totalPages: 0 }
+        };
+      }
+    }
 
     const where: any = {
       userId,
-      ...(filters?.hasCard && { 
+      ...(f.hasCard && { 
         OR: [
           { quantity: { gt: 0 } },
           { quantityFoil: { gt: 0 } }
         ]
-      })
+      }),
+      // Filtre duplicates: ne garder que les cartes dont le cardId est dans la liste
+      ...(duplicateCardIds && { cardId: { in: duplicateCardIds } })
     };
 
     // Unify search behavior with cards FTS: if search/text provided, precompute matching card IDs
     let prefilteredIds: string[] | undefined;
-    const f = filters || {} as any;
     const q = (f.search && f.search.trim().length >= 2)
       ? f.search.trim()
       : (f.textWords && f.textWords.length > 0 ? f.textWords.join(' ') : undefined);
